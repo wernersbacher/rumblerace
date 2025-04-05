@@ -18,7 +18,7 @@ export function calculateLapTime(
   track: Track,
   vehicleClass: VehicleClass
 ): number {
-  const specific = driver.specificSkills[vehicleClass]?.[track.id];
+  const specific = driver.specificSkills[vehicleClass];
   const skills = mergeSkills(driver.skills, specific);
 
   const refTime =
@@ -45,7 +45,7 @@ export function calculateLapTime(
   const straightTime = track.straights;
 
   const totalRelativeTime = slowTime + mediumTime + fastTime + straightTime;
-  const timeScalingFactor = refTime / totalSections;
+  const timeScalingFactor = refTime! / totalSections;
 
   rawTime = totalRelativeTime * timeScalingFactor;
 

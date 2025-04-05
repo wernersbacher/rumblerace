@@ -7,6 +7,7 @@ export type SkillSet = {
   racecraft: number;
   setupUnderstanding: number;
   trackAwareness: number;
+  adaptability: number;
 };
 
 export interface SkillDefinition {

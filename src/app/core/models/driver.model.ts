@@ -5,5 +5,5 @@ export interface Driver {
   name: string;
   xp: number;
   skills: SkillSet;
-  specificSkills: Record<VehicleClass, Record<string, Partial<SkillSet>>>; // trackId → skill boost
+  specificSkills: Partial<Record<VehicleClass, Partial<SkillSet>>>;
 }

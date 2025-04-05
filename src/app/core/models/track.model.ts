@@ -7,7 +7,7 @@ export interface Track {
   mediumCorners: number;
   fastCorners: number;
   straights: number;
-  referenceLapTimes: Record<VehicleClass, number>; // e.g. { GT3: 90, F1: 70 }
+  referenceLapTimes: Partial<Record<VehicleClass, number>>;
   country?: string;
   difficulty: number; // 1-10
 }

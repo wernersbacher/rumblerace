@@ -14,6 +14,7 @@ const testDriver: Driver = {
     trackAwareness: 0.2,
     racecraft: 0,
     setupUnderstanding: 0,
+    adaptability: 0,
   },
   specificSkills: {
     GT3: {},
@@ -54,6 +55,7 @@ describe('Lap Time Calculation', () => {
         trackAwareness: 0,
         racecraft: 0,
         setupUnderstanding: 0,
+        adaptability: 0,
       },
     };
     const lapTime = calculateLapTime(baseDriver, testTrack, 'GT3');
@@ -72,10 +74,11 @@ describe('Lap Time Calculation', () => {
         trackAwareness: 1,
         racecraft: 1,
         setupUnderstanding: 1,
+        adaptability: 1,
       },
     };
     const lapTime = calculateLapTime(godDriver, testTrack, 'GT3');
-    expect(lapTime).toBeLessThan(80); // mind. 10s schneller
+    expect(lapTime).toBeLessThan(80);
   });
 
   it('should improve lap time with specific skill boost', () => {
@@ -91,12 +94,11 @@ describe('Lap Time Calculation', () => {
         trackAwareness: 0,
         racecraft: 0,
         setupUnderstanding: 0,
+        adaptability: 0,
       },
       specificSkills: {
         GT3: {
-          'track-1': {
-            linesAndApex: 0.5,
-          },
+          linesAndApex: 0.5,
         },
         F1: {},
         TCR: {},
@@ -107,7 +109,7 @@ describe('Lap Time Calculation', () => {
 
     const timeWithBoost = calculateLapTime(baseDriver, testTrack, 'GT3');
 
-    baseDriver.specificSkills.GT3['track-1'].linesAndApex = 0.0;
+    baseDriver.specificSkills.GT3!.linesAndApex = 0.0;
     const timeWithoutBoost = calculateLapTime(baseDriver, testTrack, 'GT3');
 
     expect(timeWithBoost).toBeLessThan(timeWithoutBoost);
