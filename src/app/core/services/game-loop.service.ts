@@ -13,7 +13,7 @@ import { SaveGameData } from '../models/gamesave';
 })
 export class GameLoopService {
   currency: Currency = {
-    money: 300,
+    money: 3000,
     rating: 0,
   };
 
@@ -67,6 +67,17 @@ export class GameLoopService {
       vehicleClass,
       this.getHardwareBonus()
     );
+  }
+
+  getAllEffectiveSkills(vehicleClass: VehicleClass): Partial<SkillSet> {
+    const skills: Partial<SkillSet> = {};
+    for (const skillName in this.driverDataService.driver.skills) {
+      skills[skillName as keyof SkillSet] = this.getEffectiveSkill(
+        skillName as keyof SkillSet,
+        vehicleClass
+      );
+    }
+    return skills;
   }
 
   sellHardware(hardwareId: string): boolean {

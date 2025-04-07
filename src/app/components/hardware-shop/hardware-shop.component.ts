@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component } from '@angular/core';
 import { Hardware } from 'src/app/core/models/hardware.model';
 import { GameLoopService } from 'src/app/core/services/game-loop.service';
 
@@ -24,16 +24,15 @@ import { GameLoopService } from 'src/app/core/services/game-loop.service';
   imports: [CommonModule],
 })
 export class HardwareShopComponent {
-  @Input() availableHardware: Hardware[] = [];
-  @Output() hardwareBought = new EventEmitter<Hardware>();
-
   constructor(private gameLoopService: GameLoopService) {}
+
+  get availableHardware(): Hardware[] {
+    return this.gameLoopService.availableHardware;
+  }
 
   buyHardware(item: Hardware) {
     const success = this.gameLoopService.buyHardware(item.id);
-    if (success) {
-      this.hardwareBought.emit(item);
-    } else {
+    if (!success) {
       alert('Not enough money!');
     }
   }

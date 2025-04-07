@@ -1,0 +1,20 @@
+.driver-skills {
+  margin-top: 20px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+}
+
+.driver-skills h2 {
+  margin-bottom: 10px;
+}
+
+.driver-skills ul {
+  list-style: none;
+  padding: 0;
+}
+
+.driver-skills li {
+  margin: 5px 0;
+}
