@@ -1,3 +1,4 @@
+import { Currency } from './../models/economy.model';
 import { Injectable } from '@angular/core';
 import { STARTING_HARDWARE } from '../data/hardware.data';
 import { Hardware } from '../models/hardware.model';
@@ -27,40 +28,40 @@ export class HardwareService {
 
   buyHardware(
     hardwareId: string,
-    money: number
-  ): { success: boolean; remainingMoney: number } {
+    currency: Currency
+  ): { success: boolean; currency: Currency } {
     const item = this.availableHardware.find((h) => h.id === hardwareId);
-    if (!item || item.cost > money) {
-      return { success: false, remainingMoney: money };
+    if (!item || item.cost > currency.money) {
+      return { success: false, currency: currency };
     }
 
-    const remainingMoney = money - item.cost;
+    const remainingMoney = currency.money - item.cost;
     this.ownedHardware.push(item);
     this.availableHardware = this.availableHardware.filter(
       (h) => h.id !== hardwareId
     );
 
-    return { success: true, remainingMoney };
+    return { success: true, currency: { ...currency, money: remainingMoney } };
   }
 
   sellHardware(
     hardwareId: string,
-    money: number
-  ): { success: boolean; newMoney: number } {
+    currency: Currency
+  ): { success: boolean; currency: Currency } {
     const index = this.ownedHardware.findIndex((h) => h.id === hardwareId);
     if (index === -1) {
-      return { success: false, newMoney: money };
+      return { success: false, currency: currency };
     }
 
     const item = this.ownedHardware[index];
     // Return 70% of the original cost when selling
     const sellValue = Math.floor(item.cost * 0.7);
 
-    const newMoney = money + sellValue;
+    const newMoney = currency.money + sellValue;
     this.ownedHardware.splice(index, 1);
     this.availableHardware.push(item);
 
-    return { success: true, newMoney };
+    return { success: true, currency: { ...currency, money: newMoney } };
   }
 
   // Methods for save/load functionality

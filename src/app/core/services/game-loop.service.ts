@@ -1,3 +1,4 @@
+import { Currency } from './../models/economy.model';
 import { Injectable } from '@angular/core';
 import { SkillSet } from '../models/skills.model';
 import { Track } from '../models/track.model';
@@ -9,7 +10,10 @@ import { HardwareService } from './hardware.service';
   providedIn: 'root',
 })
 export class GameLoopService {
-  money: number = 300;
+  currency: Currency = {
+    money: 300,
+    rating: 0,
+  };
 
   constructor(
     private driverData: DriverDataService,
@@ -33,14 +37,13 @@ export class GameLoopService {
   }
 
   buyHardware(hardwareId: string): boolean {
-    const result = this.hardwareService.buyHardware(hardwareId, this.money);
+    const result = this.hardwareService.buyHardware(hardwareId, this.currency);
     if (result.success) {
-      this.money = result.remainingMoney;
+      this.currency = result.currency;
     }
     return result.success;
   }
 
-  // todo: hardware bonus wird nicht richtig geladen (nur im test?)
   driveLap(track: Track, vehicleClass: VehicleClass): number {
     var hardWareBonus = this.getHardwareBonus();
     const lapTime = this.driverData.calculateLapTime(
@@ -64,9 +67,9 @@ export class GameLoopService {
   }
 
   sellHardware(hardwareId: string): boolean {
-    const result = this.hardwareService.sellHardware(hardwareId, this.money);
+    const result = this.hardwareService.sellHardware(hardwareId, this.currency);
     if (result.success) {
-      this.money = result.newMoney;
+      this.currency = result.currency;
     }
     return result.success;
   }
@@ -75,7 +78,7 @@ export class GameLoopService {
   getSaveGameState() {
     return {
       driver: this.driver,
-      money: this.money,
+      currency: this.currency,
       hardware: this.hardwareService.getHardwareState(),
     };
   }
@@ -85,7 +88,7 @@ export class GameLoopService {
     if (!saveData) return false;
 
     this.driverData.driver = saveData.driver;
-    this.money = saveData.money;
+    this.currency = saveData.currency;
     this.hardwareService.loadHardwareState(saveData.hardware);
 
     return true;
