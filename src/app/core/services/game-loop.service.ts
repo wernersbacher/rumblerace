@@ -1,3 +1,4 @@
+import { SaveGameService } from './savegame.service';
 import { Currency } from './../models/economy.model';
 import { Injectable } from '@angular/core';
 import { SkillSet } from '../models/skills.model';
@@ -5,6 +6,7 @@ import { Track } from '../models/track.model';
 import { VehicleClass } from '../models/vehicle.model';
 import { DriverDataService } from './driver-state.service';
 import { HardwareService } from './hardware.service';
+import { SaveGameData } from '../models/gamesave';
 
 @Injectable({
   providedIn: 'root',
@@ -16,12 +18,13 @@ export class GameLoopService {
   };
 
   constructor(
-    private driverData: DriverDataService,
-    private hardwareService: HardwareService
+    private driverDataService: DriverDataService,
+    private hardwareService: HardwareService,
+    private saveGameService: SaveGameService
   ) {}
 
   get driver() {
-    return this.driverData.driver;
+    return this.driverDataService.driver;
   }
 
   get ownedHardware() {
@@ -46,12 +49,12 @@ export class GameLoopService {
 
   driveLap(track: Track, vehicleClass: VehicleClass): number {
     var hardWareBonus = this.getHardwareBonus();
-    const lapTime = this.driverData.calculateLapTime(
+    const lapTime = this.driverDataService.calculateLapTime(
       track,
       vehicleClass,
       hardWareBonus
     );
-    this.driverData.improveSkills(vehicleClass);
+    this.driverDataService.improveSkills(vehicleClass);
     return lapTime;
   }
 
@@ -59,7 +62,7 @@ export class GameLoopService {
     skillName: keyof SkillSet,
     vehicleClass: VehicleClass
   ): number {
-    return this.driverData.getEffectiveSkill(
+    return this.driverDataService.getEffectiveSkill(
       skillName,
       vehicleClass,
       this.getHardwareBonus()
@@ -74,21 +77,44 @@ export class GameLoopService {
     return result.success;
   }
 
-  // Method to get all state for saving
-  getSaveGameState() {
+  getSaveGameState(): SaveGameData {
     return {
-      driver: this.driver,
+      version: 1, // Add version for future compatibility
+      timestamp: new Date().toISOString(),
+      driver: this.driverDataService.getSaveState(),
       currency: this.currency,
       hardware: this.hardwareService.getHardwareState(),
     };
   }
 
+  // Method to save game state to localStorage
+  saveGame(slotName: string = 'auto'): boolean {
+    const saveData = this.getSaveGameState();
+    return this.saveGameService.saveGame(slotName, saveData);
+  }
+
+  // Method to load game state from localStorage
+  loadGame(slotName: string = 'auto'): boolean {
+    var saveData = this.saveGameService.loadGame(slotName);
+    if (!saveData) return false;
+    return this.loadSaveGameState(saveData);
+  }
+
+  listSaveSlots(): string[] {
+    return this.saveGameService.listSaveSlots();
+  }
+
   // Method to restore state from save
-  loadSaveGameState(saveData: any) {
+  loadSaveGameState(saveData: SaveGameData): boolean {
     if (!saveData) return false;
 
-    this.driverData.driver = saveData.driver;
+    // Load currency
     this.currency = saveData.currency;
+
+    // Load driver data
+    this.driverDataService.loadSaveState(saveData.driver);
+
+    // Load hardware data
     this.hardwareService.loadHardwareState(saveData.hardware);
 
     return true;

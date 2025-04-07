@@ -91,4 +91,43 @@ export class DriverDataService {
       0
     );
   }
+
+  getSaveState(): any {
+    // Return a deep copy to prevent reference issues
+    return {
+      name: this.driver.name,
+      xp: this.driver.xp,
+      skills: { ...this.driver.skills },
+      // todo: make this better
+      specificSkills: JSON.parse(JSON.stringify(this.driver.specificSkills)),
+    };
+  }
+
+  loadSaveState(driverData: any): boolean {
+    if (!driverData) return false;
+
+    try {
+      this.driver = {
+        name: driverData.name || 'Player 1',
+        xp: driverData.xp || 0,
+        skills: {
+          ...this.createEmptySkillSet(),
+          ...driverData.skills,
+        },
+        specificSkills: driverData.specificSkills || {},
+      };
+
+      // Ensure all vehicle classes have valid skill objects
+      for (const vehicleClass in this.driver.specificSkills) {
+        if (!this.driver.specificSkills[vehicleClass as VehicleClass]) {
+          this.driver.specificSkills[vehicleClass as VehicleClass] = {};
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error loading driver data:', error);
+      return false;
+    }
+  }
 }

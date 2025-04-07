@@ -66,19 +66,25 @@ export class HardwareService {
 
   // Methods for save/load functionality
   getHardwareState() {
-    return {
-      ownedHardware: this.ownedHardware,
-      availableHardware: this.availableHardware,
-    };
+    return this.ownedHardware;
   }
 
-  loadHardwareState(state: {
-    ownedHardware: Hardware[];
-    availableHardware: Hardware[];
-  }) {
-    if (!state) return false;
+  loadHardwareState(ownedHardware: Hardware[]): boolean {
+    try {
+      // Handle owned hardware
+      if (Array.isArray(ownedHardware)) {
+        this.ownedHardware = ownedHardware.map((hw) => ({ ...hw }));
+      }
 
-    this.ownedHardware = state.ownedHardware;
-    return true;
+      return true;
+    } catch (error) {
+      console.error('Error loading hardware state:', error);
+      return false;
+    }
+  }
+
+  // Reset hardware to initial state
+  resetHardware(): void {
+    this.ownedHardware = [];
   }
 }
