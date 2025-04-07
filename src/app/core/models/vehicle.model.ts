@@ -1,4 +1,11 @@
-export type VehicleClass = 'GT3' | 'F1' | 'TCR' | 'Kart' | 'LMP1';
+export enum VehicleClass {
+  GT3 = 'GT3',
+  GT4 = 'GT4',
+  F1 = 'F1',
+  TCR = 'TCR',
+  Kart = 'Kart',
+  LMP1 = 'LMP1',
+}
 
 export interface Vehicle {
   id: string;

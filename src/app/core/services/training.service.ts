@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { Track } from '../models/track.model';
 import { VehicleClass } from '../models/vehicle.model';
-import { GameLoopService } from './game-loop.service';
 import { TrainingSession } from '../models/training.model';
+import { DriverDataService } from './driver-state.service';
 
 @Injectable({
   providedIn: 'root',
@@ -11,7 +11,7 @@ export class TrainingService {
   trainingSession: TrainingSession | null = null;
   private interval: any;
 
-  constructor(private gameState: GameLoopService) {}
+  constructor(private driverData: DriverDataService) {}
 
   startLiveTraining(
     track: Track,
@@ -45,7 +45,7 @@ export class TrainingService {
       }
 
       const warmup = session.currentLap === 0 ? 0.15 : 0;
-      const lapTime = this.gameState.driveLap(track, vehicleClass);
+      const lapTime = this.driverData.calculateLapTime(track, vehicleClass);
       const noise = (Math.random() * 2 - 1) * 0.5;
       const adjustedTime =
         Math.round((lapTime * (1 + warmup) + noise) * 1000) / 1000;
@@ -54,11 +54,8 @@ export class TrainingService {
       session.currentLap++;
 
       const gain = skillGain * fatigue;
-      const driver = this.gameState.driver;
+      const driver = this.driverData.driver;
 
-      if (!driver.specificSkills[vehicleClass]) {
-        driver.specificSkills[vehicleClass] = {};
-      }
       if (!driver.specificSkills[vehicleClass]) {
         driver.specificSkills[vehicleClass] = {};
       }

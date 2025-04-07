@@ -1,117 +1,209 @@
+import { calculateLapTime, mergeSkills } from './lap-time-calculator';
 import { Driver } from '../models/driver.model';
+import { SkillSet } from '../models/skills.model';
 import { Track } from '../models/track.model';
-import { calculateLapTime } from './lap-time-calculator';
+import { VehicleClass } from '../models/vehicle.model';
 
-const testDriver: Driver = {
-  name: 'Max Simdriver',
-  xp: 100,
-  skills: {
-    linesAndApex: 0.6,
-    brakeControl: 0.4,
-    throttleControl: 0.5,
-    consistency: 0.5,
-    tireManagement: 0,
-    trackAwareness: 0.2,
-    racecraft: 0,
-    setupUnderstanding: 0,
-    adaptability: 0,
-  },
-  specificSkills: {
-    GT3: {},
-    F1: {},
-    TCR: {},
-    Kart: {},
-    LMP1: {},
-  },
-};
+describe('mergeSkills', () => {
+  let baseSkills: SkillSet;
 
-const testTrack: Track = {
-  id: 'track-1',
-  name: 'Virtual Ring',
-  slowCorners: 4,
-  mediumCorners: 5,
-  fastCorners: 3,
-  straights: 4,
-  referenceLapTimes: { GT3: 90, F1: 70, TCR: 110, Kart: 120, LMP1: 75 },
-  difficulty: 5,
-};
-
-describe('Lap Time Calculation', () => {
-  it('should return a lap time lower than reference with decent skills', () => {
-    const lapTime = calculateLapTime(testDriver, testTrack, 'GT3');
-    expect(lapTime).toBeLessThan(90);
-    expect(lapTime).toBeGreaterThan(60);
-  });
-
-  it('should return reference time with no skills', () => {
-    const baseDriver: Driver = {
-      ...testDriver,
-      skills: {
-        linesAndApex: 0,
-        brakeControl: 0,
-        throttleControl: 0,
-        consistency: 0,
-        tireManagement: 0,
-        trackAwareness: 0,
-        racecraft: 0,
-        setupUnderstanding: 0,
-        adaptability: 0,
-      },
+  beforeEach(() => {
+    baseSkills = {
+      linesAndApex: 0.5,
+      brakeControl: 0.4,
+      throttleControl: 0.3,
+      consistency: 0.6,
+      tireManagement: 0.2,
+      racecraft: 0.3,
+      setupUnderstanding: 0.1,
+      trackAwareness: 0.4,
+      adaptability: 0.2,
     };
-    const lapTime = calculateLapTime(baseDriver, testTrack, 'GT3');
-    expect(lapTime).toBeCloseTo(90);
   });
 
-  it('should return significantly better lap time with maxed skills', () => {
-    const godDriver: Driver = {
-      ...testDriver,
-      skills: {
-        linesAndApex: 1,
-        brakeControl: 1,
-        throttleControl: 1,
-        consistency: 1,
-        tireManagement: 1,
-        trackAwareness: 1,
-        racecraft: 1,
-        setupUnderstanding: 1,
-        adaptability: 1,
-      },
+  it('should return base skills when no specific or hardware bonuses are provided', () => {
+    const result = mergeSkills(baseSkills);
+    expect(result).toEqual(baseSkills);
+  });
+
+  it('should apply vehicle-specific skills at 30% effectiveness', () => {
+    const specificSkills: Partial<SkillSet> = {
+      linesAndApex: 0.2,
+      brakeControl: 0.3,
     };
-    const lapTime = calculateLapTime(godDriver, testTrack, 'GT3');
-    expect(lapTime).toBeLessThan(80);
+
+    const result = mergeSkills(baseSkills, specificSkills);
+
+    expect(result.linesAndApex).toBeCloseTo(0.5 + 0.2 * 0.3, 5);
+    expect(result.brakeControl).toBeCloseTo(0.4 + 0.3 * 0.3, 5);
+    expect(result.throttleControl).toBe(0.3); // Unchanged
   });
 
-  it('should improve lap time with specific skill boost', () => {
-    const baseDriver: Driver = {
-      name: 'Max',
-      xp: 0,
+  it('should apply hardware bonuses at full effectiveness', () => {
+    const hardwareBonus: Partial<SkillSet> = {
+      linesAndApex: 0.1,
+      throttleControl: 0.2,
+    };
+
+    const result = mergeSkills(baseSkills, undefined, hardwareBonus);
+
+    expect(result.linesAndApex).toBeCloseTo(0.5 + 0.1, 5);
+    expect(result.throttleControl).toBeCloseTo(0.3 + 0.2, 5);
+    expect(result.brakeControl).toBe(0.4); // Unchanged
+  });
+
+  it('should combine base, specific, and hardware bonuses correctly', () => {
+    const specificSkills: Partial<SkillSet> = {
+      linesAndApex: 0.2,
+      brakeControl: 0.3,
+    };
+
+    const hardwareBonus: Partial<SkillSet> = {
+      linesAndApex: 0.1,
+      throttleControl: 0.2,
+    };
+
+    const result = mergeSkills(baseSkills, specificSkills, hardwareBonus);
+
+    expect(result.linesAndApex).toBeCloseTo(0.5 + 0.2 * 0.3 + 0.1, 5);
+    expect(result.brakeControl).toBeCloseTo(0.4 + 0.3 * 0.3, 5);
+    expect(result.throttleControl).toBeCloseTo(0.3 + 0.2, 5);
+  });
+});
+
+describe('calculateLapTime', () => {
+  // Mock data
+  let driver: Driver;
+  let track: Track;
+
+  beforeEach(() => {
+    driver = {
+      name: 'Test Driver',
+      xp: 1000,
       skills: {
         linesAndApex: 0.5,
-        brakeControl: 0.5,
-        throttleControl: 0.5,
-        consistency: 0.5,
-        tireManagement: 0,
-        trackAwareness: 0,
-        racecraft: 0,
-        setupUnderstanding: 0,
-        adaptability: 0,
+        brakeControl: 0.4,
+        throttleControl: 0.3,
+        consistency: 0.6,
+        tireManagement: 0.2,
+        racecraft: 0.3,
+        setupUnderstanding: 0.1,
+        trackAwareness: 0.4,
+        adaptability: 0.2,
       },
       specificSkills: {
-        GT3: {
-          linesAndApex: 0.5,
+        [VehicleClass.GT3]: {
+          linesAndApex: 0.3,
+          brakeControl: 0.2,
         },
-        F1: {},
-        TCR: {},
-        Kart: {},
-        LMP1: {},
       },
     };
 
-    const timeWithBoost = calculateLapTime(baseDriver, testTrack, 'GT3');
+    track = {
+      id: 'test-track',
+      name: 'Test Track',
+      slowCorners: 5,
+      mediumCorners: 6,
+      fastCorners: 3,
+      straights: 4,
+      referenceLapTimes: {
+        [VehicleClass.GT3]: 90, // 1:30.000
+        [VehicleClass.GT4]: 100, // 1:40.000
+      },
+      difficulty: 7,
+    };
+  });
 
-    baseDriver.specificSkills.GT3!.linesAndApex = 0.0;
-    const timeWithoutBoost = calculateLapTime(baseDriver, testTrack, 'GT3');
+  it('should calculate lap time correctly with no hardware bonus', () => {
+    const lapTime = calculateLapTime(driver, track, VehicleClass.GT3);
 
-    expect(timeWithBoost).toBeLessThan(timeWithoutBoost);
+    // We can't predict the exact value due to complex calculations,
+    // but we can check it's a reasonable number and rounded to 3 decimals
+    expect(lapTime).toBeGreaterThan(80);
+    expect(lapTime).toBeLessThan(100);
+    expect(Math.round(lapTime * 1000) / 1000).toBe(lapTime);
+  });
+
+  it('should calculate lap time correctly with hardware bonus', () => {
+    const hardwareBonus: Partial<SkillSet> = {
+      linesAndApex: 0.1,
+      throttleControl: 0.1,
+    };
+
+    const lapTimeWithoutBonus = calculateLapTime(
+      driver,
+      track,
+      VehicleClass.GT3
+    );
+    const lapTimeWithBonus = calculateLapTime(
+      driver,
+      track,
+      VehicleClass.GT3,
+      hardwareBonus
+    );
+
+    // With better hardware, lap time should be faster
+    expect(lapTimeWithBonus).toBeLessThan(lapTimeWithoutBonus);
+  });
+
+  it('should use different reference times for different vehicle classes', () => {
+    const gt3Time = calculateLapTime(driver, track, VehicleClass.GT3);
+    const gt4Time = calculateLapTime(driver, track, VehicleClass.GT4);
+
+    // GT4 should be slower than GT3
+    expect(gt4Time).toBeGreaterThan(gt3Time);
+  });
+
+  it('should apply consistency bonus correctly', () => {
+    // Create a driver with different consistency
+    const consistentDriver = { ...driver };
+    consistentDriver.skills = { ...driver.skills, consistency: 1.0 };
+
+    const regularTime = calculateLapTime(driver, track, VehicleClass.GT3);
+    const consistentTime = calculateLapTime(
+      consistentDriver,
+      track,
+      VehicleClass.GT3
+    );
+
+    // More consistent driver should be faster
+    expect(consistentTime).toBeLessThan(regularTime);
+
+    // Calculate maximum consistency bonus (5%)
+    const expectedMaxBonus = regularTime * 0.05;
+    const actualDifference = regularTime - consistentTime;
+
+    // The difference should be at most 5% of regular time
+    expect(actualDifference).toBeLessThanOrEqual(expectedMaxBonus + 0.001); // Small epsilon for floating point
+  });
+
+  it('should give different lap times for tracks with different configurations', () => {
+    const technicalTrack: Track = {
+      ...track,
+      slowCorners: 10,
+      mediumCorners: 4,
+      fastCorners: 2,
+      straights: 2,
+    };
+
+    const fastTrack: Track = {
+      ...track,
+      slowCorners: 2,
+      mediumCorners: 3,
+      fastCorners: 8,
+      straights: 5,
+    };
+
+    const standardTime = calculateLapTime(driver, track, VehicleClass.GT3);
+    const technicalTime = calculateLapTime(
+      driver,
+      technicalTrack,
+      VehicleClass.GT3
+    );
+    const fastTrackTime = calculateLapTime(driver, fastTrack, VehicleClass.GT3);
+
+    // Different track configurations should lead to different lap times
+    expect(technicalTime).not.toEqual(standardTime);
+    expect(fastTrackTime).not.toEqual(standardTime);
   });
 });
