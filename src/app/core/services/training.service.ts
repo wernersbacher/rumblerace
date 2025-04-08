@@ -10,6 +10,7 @@ import { DriverDataService } from './driver-state.service';
 export class TrainingService {
   trainingSession: TrainingSession | null = null;
   private interval: any;
+  private skillGains: { [key: string]: number } = {};
 
   constructor(private driverData: DriverDataService) {}
 
@@ -32,6 +33,13 @@ export class TrainingService {
 
     let fatigue = 1.0;
     let skillGain = 0.01;
+
+    // Reset skill gains
+    this.skillGains = {
+      linesAndApex: 0,
+      brakeControl: 0,
+      consistency: 0,
+    };
 
     this.interval = setInterval(() => {
       const session = this.trainingSession;
@@ -68,6 +76,12 @@ export class TrainingService {
       driver.skills.linesAndApex += gain * 0.2;
       driver.skills.consistency += gain * 0.1;
 
+      // Track skill gains
+      // Track skill gains
+      this.skillGains['linesAndApex'] += gain * 0.6;
+      this.skillGains['brakeControl'] += gain * 0.4;
+      this.skillGains['consistency'] += gain * 0.2;
+
       fatigue *= 0.96;
     }, intervalMs);
   }
@@ -89,5 +103,9 @@ export class TrainingService {
 
   getSession(): TrainingSession | null {
     return this.trainingSession;
+  }
+
+  getSkillGains(): { [key: string]: number } {
+    return this.skillGains;
   }
 }

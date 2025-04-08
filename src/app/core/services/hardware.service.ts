@@ -51,7 +51,6 @@ export class HardwareService {
     }
 
     const item = this.ownedHardware[index];
-    // Return 70% of the original cost when selling
     const sellValue = calcResellValue(item);
 
     const newMoney = currency.money + sellValue;

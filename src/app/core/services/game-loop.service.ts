@@ -7,6 +7,7 @@ import { VehicleClass } from '../models/vehicle.model';
 import { DriverDataService } from './driver-state.service';
 import { HardwareService } from './hardware.service';
 import { SaveGameData } from '../models/gamesave';
+import { BEGINNER_TRACKS } from '../data/tracks.data';
 
 @Injectable({
   providedIn: 'root',
@@ -86,6 +87,10 @@ export class GameLoopService {
       this.currency = result.currency;
     }
     return result.success;
+  }
+
+  getTracks(): Track[] {
+    return BEGINNER_TRACKS;
   }
 
   getSaveGameState(): SaveGameData {

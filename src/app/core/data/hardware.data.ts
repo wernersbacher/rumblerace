@@ -2,7 +2,6 @@ import { HardwareType } from './../models/hardware.model';
 import { Hardware } from '../models/hardware.model';
 
 export const STARTING_HARDWARE: Hardware[] = [
-  // Existing hardware
   {
     id: 'wheel-basic',
     name: 'Basic Wheel',
