@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { STARTING_HARDWARE } from '../data/hardware.data';
 import { Hardware } from '../models/hardware.model';
 import { SkillSet } from '../models/skills.model';
+import { calcResellValue } from '../utils/economy';
 
 @Injectable({
   providedIn: 'root',
@@ -55,7 +56,7 @@ export class HardwareService {
 
     const item = this.ownedHardware[index];
     // Return 70% of the original cost when selling
-    const sellValue = Math.floor(item.cost * 0.7);
+    const sellValue = calcResellValue(item);
 
     const newMoney = currency.money + sellValue;
     this.ownedHardware.splice(index, 1);

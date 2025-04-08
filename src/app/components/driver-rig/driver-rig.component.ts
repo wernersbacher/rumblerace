@@ -1,20 +1,50 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
-import { Hardware } from 'src/app/core/models/hardware.model';
+import { Hardware, HardwareType } from 'src/app/core/models/hardware.model';
 import { GameLoopService } from 'src/app/core/services/game-loop.service';
+import { ButtonModule } from 'primeng/button';
+import { TableModule } from 'primeng/table';
+import { CardModule } from 'primeng/card';
+import { calcResellValue } from 'src/app/core/utils/economy';
 
 @Component({
   selector: 'app-driver-rig',
   template: `
-    <div class="driver-rig">
-      <ul>
-        <li *ngFor="let hardware of ownedHardware">
-          <p>{{ hardware.name }} ({{ hardware.type }})</p>
-        </li>
-      </ul>
+    <div class="flex flex-wrap gap-4">
+      <p-card
+        *ngFor="let category of hardwareCategories"
+        class="md:w-1/2 lg:w-1/3"
+      >
+        <p-table
+          [value]="getHardwareByCategory(category)"
+          [tableStyle]="{ 'min-width': '20rem', width: '100%' }"
+        >
+          <ng-template #caption>
+            <div class="flex items-center justify-between">
+              <span class="text-xl font-bold">{{ category }}</span>
+            </div>
+          </ng-template>
+          <ng-template #body let-hardware>
+            <tr>
+              <td>{{ hardware.name }}</td>
+              <td>
+                <p-button
+                  severity="warn"
+                  [raised]="true"
+                  (click)="sellHardware(hardware)"
+                >
+                  Sell
+                </p-button>
+
+                {{ calcResellValue(hardware) }}€
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </p-card>
     </div>
   `,
-  imports: [CommonModule],
+  imports: [CommonModule, ButtonModule, TableModule, CardModule],
   styles: [
     `
       .driver-rig {
@@ -24,26 +54,35 @@ import { GameLoopService } from 'src/app/core/services/game-loop.service';
         border-radius: 5px;
         background-color: #f9f9f9;
       }
-
-      .driver-rig h2 {
-        margin-bottom: 10px;
-      }
-
-      .driver-rig ul {
-        list-style: none;
-        padding: 0;
-      }
-
-      .driver-rig li {
-        margin: 5px 0;
-      }
     `,
   ],
 })
 export class DriverRigComponent {
+  hardwareCategories = [
+    HardwareType.WHEEL,
+    HardwareType.PEDALS,
+    HardwareType.RIG,
+    HardwareType.MONITOR,
+    HardwareType.PC,
+  ];
+  calcResellValue = calcResellValue;
+
   constructor(private gameLoopService: GameLoopService) {}
 
   get ownedHardware(): Hardware[] {
     return this.gameLoopService.ownedHardware;
+  }
+
+  getHardwareByCategory(category: string): Hardware[] {
+    return this.ownedHardware.filter(
+      (item) => item.type.toLowerCase() === category.toLowerCase()
+    );
+  }
+
+  sellHardware(hardware: Hardware) {
+    const success = this.gameLoopService.sellHardware(hardware.id);
+    if (!success) {
+      alert('Unable to sell the hardware!');
+    }
   }
 }
