@@ -7,7 +7,6 @@ import { GameLoopService } from 'src/app/core/services/game-loop.service';
   selector: 'app-hardware-shop',
   template: `
     <div class="hardware-shop">
-      <h2>Hardware Shop</h2>
       <ul>
         <li *ngFor="let item of availableHardware">
           <p>{{ item.name }} - {{ item.cost }}€</p>

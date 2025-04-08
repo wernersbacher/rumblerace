@@ -17,14 +17,12 @@ import { VehicleSelectorComponent } from '../shared/vehicle-select.component';
   ],
   template: `
     <div class="driver">
-      <h2>Driver Skills</h2>
-
       <!-- Vehicle Selector -->
       <app-vehicle-selector
         (vehicleClassChange)="onVehicleClassChange($event)"
       ></app-vehicle-selector>
 
-      <div>
+      <div class="flex gap-2 border-2 border-gray-300 p-2 rounded">
         <div>
           <span>Lines And Apexes</span>
           <div>{{ effectiveSkills.linesAndApex }}</div>
@@ -72,7 +70,6 @@ import { VehicleSelectorComponent } from '../shared/vehicle-select.component';
       </div>
     </div>
   `,
-  styleUrls: ['./driver-skills.component.css'],
 })
 export class DriverSkillsComponent implements OnInit, OnDestroy {
   effectiveSkills: Partial<SkillSet> = {};

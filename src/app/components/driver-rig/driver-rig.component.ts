@@ -7,7 +7,6 @@ import { GameLoopService } from 'src/app/core/services/game-loop.service';
   selector: 'app-driver-rig',
   template: `
     <div class="driver-rig">
-      <h2>Owned Hardware</h2>
       <ul>
         <li *ngFor="let hardware of ownedHardware">
           <p>{{ hardware.name }} ({{ hardware.type }})</p>
