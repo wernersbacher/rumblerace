@@ -4,17 +4,11 @@ import { SkillSet } from 'src/app/core/models/skills.model';
 import { VehicleClass } from 'src/app/core/models/vehicle.model';
 import { GameLoopService } from 'src/app/core/services/game-loop.service';
 import { MatSelectModule } from '@angular/material/select';
-import { MatButtonModule } from '@angular/material/button';
 import { VehicleSelectorComponent } from '../shared/vehicle-select.component';
 
 @Component({
   selector: 'app-driver',
-  imports: [
-    CommonModule,
-    MatButtonModule,
-    MatSelectModule,
-    VehicleSelectorComponent,
-  ],
+  imports: [CommonModule, MatSelectModule, VehicleSelectorComponent],
   template: `
     <div class="driver">
       <!-- Vehicle Selector -->
