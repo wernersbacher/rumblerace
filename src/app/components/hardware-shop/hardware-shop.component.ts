@@ -29,7 +29,9 @@ import { CardModule } from 'primeng/card';
               <td>
                 <p-button
                   [raised]="true"
-                  [disabled]="isHardwareOwned(product.id)"
+                  [disabled]="
+                    isHardwareOwned(product.id) || !canAfford(product.cost)
+                  "
                   (click)="buyHardware(product)"
                 >
                   Buy
@@ -77,5 +79,9 @@ export class HardwareShopComponent {
     return this.gameLoopService.ownedHardware.some(
       (ownedItem) => ownedItem.id === hardwareId
     );
+  }
+
+  canAfford(cost: number): boolean {
+    return this.gameLoopService.currency.money >= cost;
   }
 }

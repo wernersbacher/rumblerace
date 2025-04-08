@@ -38,10 +38,6 @@ export class HardwareService {
 
     const remainingMoney = currency.money - item.cost;
     this.ownedHardware.push(item);
-    this.availableHardware = this.availableHardware.filter(
-      (h) => h.id !== hardwareId
-    );
-
     return { success: true, currency: { ...currency, money: remainingMoney } };
   }
 
