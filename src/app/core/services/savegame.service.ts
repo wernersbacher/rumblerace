@@ -22,7 +22,8 @@ export class SaveGameService {
   // Load game from specified slot
   loadGame(slotName: string = 'auto'): any {
     try {
-      const saveJson = localStorage.getItem(`save_${slotName}`);
+      var slotNameFull = `save_${slotName}`;
+      const saveJson = localStorage.getItem(slotNameFull);
       if (!saveJson) return false;
 
       const saveData = JSON.parse(saveJson) as SaveGameData;

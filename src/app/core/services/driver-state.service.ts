@@ -130,4 +130,13 @@ export class DriverDataService {
       return false;
     }
   }
+
+  resetDriver(): void {
+    this.driver = {
+      name: 'Player 1',
+      xp: 0,
+      skills: this.createEmptySkillSet(),
+      specificSkills: {},
+    };
+  }
 }

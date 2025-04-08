@@ -130,4 +130,16 @@ export class GameLoopService {
 
     return true;
   }
+
+  resetGame(): void {
+    // Reset currency to default values
+    // todo: move to inital value
+    this.currency = { money: 3000, rating: 0 };
+
+    // Reset driver data
+    this.driverDataService.resetDriver();
+
+    // Reset hardware
+    this.hardwareService.resetHardware();
+  }
 }

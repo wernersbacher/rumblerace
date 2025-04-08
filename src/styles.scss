@@ -1,4 +1,5 @@
 @use 'tailwindcss' as *;
+@use "primeicons/primeicons.css" as *;
 @use '@angular/material' as mat;
 
 @plugin "tailwindcss-primeui";
