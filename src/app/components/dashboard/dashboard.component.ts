@@ -10,12 +10,6 @@ import { ButtonModule } from 'primeng/button';
 @Component({
   selector: 'app-dashboard',
   template: `
-    <p-toolbar>
-      <ng-template #start> Rumblerace v0.0.1 </ng-template>
-      <ng-template #center> Money </ng-template>
-      <ng-template #end> </ng-template>
-    </p-toolbar>
-
     <div class="dashboard flex flex-wrap gap-4">
       <p-card header="Cash and so" class="w-full md:w-1/2 lg:w-1/3">
         <app-currency-display></app-currency-display>

@@ -16,7 +16,9 @@ import { VehicleSelectorComponent } from '../shared/vehicle-select.component';
         (vehicleClassChange)="onVehicleClassChange($event)"
       ></app-vehicle-selector>
 
-      <div class="flex gap-2 border-2 border-gray-300 p-2 rounded">
+      <div
+        class="flex flex-wrap border-1 gap-2 border-2 border-gray-300 p-2 rounded"
+      >
         <div>
           <span>Lines And Apexes</span>
           <div>{{ effectiveSkills.linesAndApex }}</div>
