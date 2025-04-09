@@ -1,5 +1,5 @@
 import Rand from 'rand-seed';
-import { Driver } from './models';
+import { RaceDriver } from '../models/race.model';
 import { DAMAGE_PENALTY } from './damage';
 
 /**
@@ -11,7 +11,7 @@ import { DAMAGE_PENALTY } from './damage';
  */
 export class Race {
   rng: Rand;
-  drivers: Driver[] = [];
+  drivers: RaceDriver[] = [];
   numLaps: number;
   log: string[] = [];
 
@@ -21,7 +21,11 @@ export class Race {
   readonly errorBaseChance: number = 0.005; // Basiswahrscheinlichkeit für einen Fehler pro Sekunde
   readonly overtakeBaseChance: number = 0.01; // Basischance, dass ein Überholversuch initiiert wird, wenn gedrängt
 
-  constructor(drivers: Driver[], numLaps: number, seed: string | undefined) {
+  constructor(
+    drivers: RaceDriver[],
+    numLaps: number,
+    seed: string | undefined
+  ) {
     this.rng = new Rand(seed);
     // Fahrer werden in Startreihenfolge im Array geliefert.
     this.drivers = drivers;
@@ -38,7 +42,7 @@ export class Race {
    * Liefert die effektive Rundenzeit eines Fahrers basierend auf seinem Schaden
    * und einem kleinen Zufallsfaktor zur Variation.
    */
-  getEffectiveLapTime(driver: Driver): number {
+  getEffectiveLapTime(driver: RaceDriver): number {
     // Je mehr Schaden, desto langsamer:
     const damagePenalty = driver.damage * DAMAGE_PENALTY;
     // Der Zufallsfaktor simuliert kleine Schwankungen (z. B. -0.2 bis +0.2 Sekunden)
@@ -49,7 +53,7 @@ export class Race {
   /**
    * Berechnet die ideale Geschwindigkeit in m/s des Fahrers, wenn er frei fahren könnte.
    */
-  getIdealSpeed(driver: Driver): number {
+  getIdealSpeed(driver: RaceDriver): number {
     const effectiveLapTime = this.getEffectiveLapTime(driver);
     return this.trackLength / effectiveLapTime;
   }
@@ -126,9 +130,9 @@ export class Race {
    * @returns Die tatsächliche Geschwindigkeit
    */
   calculateActualSpeed(
-    driver: Driver,
+    driver: RaceDriver,
     idealSpeed: number,
-    leader: Driver | null
+    leader: RaceDriver | null
   ): number {
     let actualSpeed = idealSpeed;
 
@@ -145,7 +149,7 @@ export class Race {
       }
 
       this.log.push(
-        `[DEBUG] ${driver.name} speed: ${actualSpeed.toFixed(
+        `[DEBUG] ${driver.driver.name} speed: ${actualSpeed.toFixed(
           2
         )} m/s (${idealSpeed.toFixed(2)} m/s id), gap to leader: ${gap.toFixed(
           2
@@ -153,7 +157,7 @@ export class Race {
       );
     } else {
       this.log.push(
-        `[DEBUG] ${driver.name} speed: ${actualSpeed.toFixed(
+        `[DEBUG] ${driver.driver.name} speed: ${actualSpeed.toFixed(
           2
         )} m/s (${idealSpeed.toFixed(2)} m/s id), (leader)`
       );
@@ -168,7 +172,7 @@ export class Race {
    * @param leader Der Leader
    * @returns Abstand in Metern
    */
-  calculateGapToLeader(driver: Driver, leader: Driver): number {
+  calculateGapToLeader(driver: RaceDriver, leader: RaceDriver): number {
     return leader.trackPosition - driver.trackPosition;
   }
 
@@ -177,7 +181,7 @@ export class Race {
    * @param driver Der zu prüfende Fahrer
    * @param actualSpeed Die aktuelle Geschwindigkeit in m/s
    */
-  checkLapCompletion(driver: Driver, actualSpeed: number): void {
+  checkLapCompletion(driver: RaceDriver, actualSpeed: number): void {
     if (driver.trackPosition < this.trackLength) {
       return;
     }
@@ -194,7 +198,7 @@ export class Race {
     // Überschüssige Strecke zum Übertrag in die nächste Runde:
     driver.trackPosition = overrunDistance;
     this.log.push(
-      `${driver.name} beendete Runde ${
+      `${driver.driver.name} beendete Runde ${
         driver.currentLap - 1
       } (Gesamtzeit: ${driver.totalTime.toFixed(3)}s)`
     );
@@ -203,9 +207,9 @@ export class Race {
     if (driver.currentLap > this.numLaps) {
       driver.finished = true;
       this.log.push(
-        `${driver.name} hat das Rennen beendet in ${driver.totalTime.toFixed(
-          3
-        )} Sekunden.`
+        `${
+          driver.driver.name
+        } hat das Rennen beendet in ${driver.totalTime.toFixed(3)} Sekunden.`
       );
     }
   }
@@ -214,7 +218,7 @@ export class Race {
    * Prüft für den aktuellen Fahrer, ob ein Fehler oder Überholversuch passiert.
    * Die Wahrscheinlichkeiten werden über den Aggressionslevel und die Racecraft-Werte moduliert.
    */
-  processEvents(driver: Driver, currentTime: number) {
+  processEvents(driver: RaceDriver, currentTime: number) {
     if (driver.finished) return;
 
     // Fehlerchance: Basischance plus ein Zuschlag je nach Aggression.
@@ -228,7 +232,7 @@ export class Race {
         driver.damage += damage;
         this.log.push(
           `[${currentTime.toFixed(1)}s] ${
-            driver.name
+            driver.driver.name
           } hat einen schweren Fehler gemacht und Schaden +${damage.toFixed(
             1
           )} erlitten!`
@@ -239,7 +243,7 @@ export class Race {
         driver.damage += damage;
         this.log.push(
           `[${currentTime.toFixed(1)}s] ${
-            driver.name
+            driver.driver.name
           } macht einen Fehler und verliert etwas Tempo (Schaden +${damage.toFixed(
             1
           )}).`
@@ -266,8 +270,8 @@ export class Race {
         Math.min(Math.max(baseOvertakeChance, 0.1), 0.6) +
         this.overtakeBaseChance;
       this.log.push(
-        `[DEBUG] ${driver.name} attempting to overtake ${
-          leader.name
+        `[DEBUG] ${driver.driver.name} attempting to overtake ${
+          leader.driver.name
         } with chance ${chance.toFixed(2)}`
       );
       if (this.rng.next() < chance) {
@@ -275,7 +279,9 @@ export class Race {
         // sodass der Trailing den Leader überholt.
         this.swapPositions(driver, leader);
         this.log.push(
-          `[${currentTime.toFixed(1)}s] ${driver.name} überholt ${leader.name}!`
+          `[${currentTime.toFixed(1)}s] ${driver.driver.name} überholt ${
+            leader.driver.name
+          }!`
         );
       } else {
         // Scheiterter Überholversuch: kleiner Fehler, der zusätzlichen Schaden einbringt.
@@ -283,7 +289,7 @@ export class Race {
         driver.damage += damage;
         this.log.push(
           `[${currentTime.toFixed(1)}s] ${
-            driver.name
+            driver.driver.name
           } versucht zu überholen, scheitert aber und verliert Zeit (Schaden +${damage.toFixed(
             1
           )}).`
@@ -297,7 +303,7 @@ export class Race {
    * Fahrer (im Sinne des Fortschritts). Dazu wird nach Fahrern gesucht, die weiter
    * als der aktuelle Fahrer sind. Liegt keiner vor, gibt es null zurück.
    */
-  findImmediateLeader(driver: Driver): Driver | null {
+  findImmediateLeader(driver: RaceDriver): RaceDriver | null {
     // Filtere alle Fahrer, die noch nicht fertig sind und weiter fortgeschritten sind.
     const candidates = this.drivers.filter(
       (d) =>
@@ -321,7 +327,7 @@ export class Race {
    * Tauscht die Positionen (trackPosition und ggf. zusätzliche Kennwerte) zweier Fahrer
    * als Folge eines erfolgreichen Überholversuchs.
    */
-  swapPositions(driverA: Driver, driverB: Driver) {
+  swapPositions(driverA: RaceDriver, driverB: RaceDriver) {
     const totalProgressA =
       driverA.currentLap * this.trackLength + driverA.trackPosition;
     const totalProgressB =
@@ -351,7 +357,7 @@ export class Race {
     let gapLog = `[${currentTime.toFixed(1)}s] Live-Abstände: `;
     gapLog += sortedDrivers
       .map((driver, i) => {
-        if (i === 0) return `${driver.name} (Leading)`;
+        if (i === 0) return `${driver.driver.name} (Leading)`;
         // Berechne den Abstand zwischen dem Fahrer und seinem Vordermann in Metern:
         const leader = sortedDrivers[i - 1];
         const meterGap =
@@ -364,7 +370,7 @@ export class Race {
         const driverSpeed = this.getIdealSpeed(driver);
         const timeGap = driverSpeed > 0 ? meterGap / driverSpeed : 0;
 
-        return `${driver.name}: ${timeGap.toFixed(1)}s`;
+        return `${driver.driver.name}: ${timeGap.toFixed(1)}s`;
       })
       .join(' | ');
     this.log.push(gapLog);
@@ -382,7 +388,9 @@ export class Race {
     sortedDrivers.forEach((driver, index) => {
       const timeDelta = driver.totalTime - winnerTime; // Zeitdifferenz zum Gewinner
       this.log.push(
-        `${index + 1}. ${driver.name} – Gesamtzeit: ${driver.totalTime.toFixed(
+        `${index + 1}. ${
+          driver.driver.name
+        } – Gesamtzeit: ${driver.totalTime.toFixed(
           1
         )}s, Schaden: ${driver.damage.toFixed(1)}, Abstand: ${
           index === 0 ? '---' : `+${timeDelta.toFixed(1)}s`

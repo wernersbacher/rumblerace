@@ -1,21 +1,35 @@
+import { RaceDriver } from '../models/race.model';
 import { Race } from './core';
 import { DAMAGE_PENALTY } from './damage';
-import { Driver } from './models';
-
 fdescribe('Race', () => {
   let race: Race;
-  let drivers: Driver[];
+  let drivers: RaceDriver[];
 
-  // Helper function to create a standard driver
+  // Helper function to create a standard driver for tests
   function createDriver(
     id: number,
     name: string,
     baseLapTime: number,
     isPlayer = false
-  ): Driver {
+  ): RaceDriver {
     return {
       id,
-      name,
+      driver: {
+        name,
+        xp: 0,
+        skills: {
+          linesAndApex: 0.5,
+          brakeControl: 0.4,
+          throttleControl: 0.3,
+          consistency: 0.6,
+          tireManagement: 0.2,
+          racecraft: 0.3,
+          setupUnderstanding: 0.1,
+          trackAwareness: 0.4,
+          adaptability: 0.2,
+        },
+        specificSkills: {},
+      },
       baseLapTime,
       damage: 0,
       aggression: 3,

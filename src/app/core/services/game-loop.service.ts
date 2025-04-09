@@ -8,6 +8,7 @@ import { DriverDataService } from './driver-state.service';
 import { HardwareService } from './hardware.service';
 import { SaveGameData } from '../models/gamesave';
 import { BEGINNER_TRACKS } from '../data/tracks.data';
+import { RaceService } from './racing.service';
 
 @Injectable({
   providedIn: 'root',
@@ -21,7 +22,8 @@ export class GameLoopService {
   constructor(
     private driverDataService: DriverDataService,
     private hardwareService: HardwareService,
-    private saveGameService: SaveGameService
+    private saveGameService: SaveGameService,
+    private raceService: RaceService
   ) {}
 
   get driver() {
