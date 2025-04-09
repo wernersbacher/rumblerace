@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { Hardware, HardwareType } from 'src/app/core/models/hardware.model';
-import { GameLoopService } from 'src/app/core/services/game-loop.service';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { CardModule } from 'primeng/card';
+import { HardwareService } from 'src/app/core/services/hardware.service';
+import { CurrencyService } from 'src/app/core/services/currency.service';
 
 @Component({
   selector: 'app-hardware-shop',
@@ -56,10 +57,13 @@ export class HardwareShopComponent {
     HardwareType.PC,
   ];
 
-  constructor(private gameLoopService: GameLoopService) {}
+  constructor(
+    private hardwareService: HardwareService,
+    private currencyService: CurrencyService
+  ) {}
 
   get availableHardware(): Hardware[] {
-    return this.gameLoopService.availableHardware;
+    return this.hardwareService.availableHardware;
   }
 
   getHardwareByCategory(category: string): Hardware[] {
@@ -69,19 +73,20 @@ export class HardwareShopComponent {
   }
 
   buyHardware(item: Hardware) {
-    const success = this.gameLoopService.buyHardware(item.id);
-    if (!success) {
+    const result = this.hardwareService.buyHardware(item.id);
+
+    if (!result) {
       alert('Not enough money!');
     }
   }
 
   isHardwareOwned(hardwareId: string): boolean {
-    return this.gameLoopService.ownedHardware.some(
+    return this.hardwareService.ownedHardware.some(
       (ownedItem) => ownedItem.id === hardwareId
     );
   }
 
   canAfford(cost: number): boolean {
-    return this.gameLoopService.currency.money >= cost;
+    return this.currencyService.currency.money >= cost;
   }
 }

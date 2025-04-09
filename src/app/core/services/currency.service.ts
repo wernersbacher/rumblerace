@@ -5,7 +5,7 @@ import { Currency } from '../models/economy.model';
   providedIn: 'root',
 })
 export class CurrencyService {
-  private currency: Currency = {
+  public currency: Currency = {
     money: 3000,
     rating: 0,
   };

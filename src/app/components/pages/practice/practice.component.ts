@@ -8,6 +8,7 @@ import { Track } from 'src/app/core/models/track.model';
 import { VehicleClass } from 'src/app/core/models/vehicle.model';
 import { TrainingService } from 'src/app/core/services/training.service';
 import { FormsModule } from '@angular/forms';
+import { TrackService } from 'src/app/core/services/track.service';
 @Component({
   selector: 'app-practice-session',
   standalone: true,
@@ -114,16 +115,18 @@ import { FormsModule } from '@angular/forms';
 export class PracticeSessionComponent implements OnInit, OnDestroy {
   constructor(
     private trainingService: TrainingService,
-    private gameLoopService: GameLoopService
+    private trackService: TrackService
   ) {}
 
-  tracks!: Track[];
+  tracks: Track[] = [];
+  filteredTracks: Track[] = [];
   vehicleClasses = Object.values(VehicleClass);
   selectedTrack: Track | null = null;
   selectedVehicleClass: VehicleClass | null = null;
   lapTimes: number[] = [];
   isRunning = false;
   skillGains: { [key: string]: number } = {};
+
   get skillGainsLength(): number {
     return Object.keys(this.skillGains).length;
   }
@@ -131,27 +134,18 @@ export class PracticeSessionComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.trainingService.cancelLiveTraining();
-    this.tracks = this.gameLoopService.getTracks();
+    this.tracks = this.trackService.getAllTracks();
+    this.filteredTracks = this.tracks;
   }
-
   ngOnDestroy(): void {
     this.cancelPractice();
   }
 
-  get filteredTracks(): Track[] {
-    if (!this.selectedVehicleClass) {
-      return this.tracks;
-    }
-    return this.tracks.filter(
-      (track) =>
-        track.referenceLapTimes[
-          this.selectedVehicleClass as keyof typeof track.referenceLapTimes
-        ] !== undefined
-    );
-  }
-
   onVehicleClassChange(): void {
     this.selectedTrack = null; // Reset selected track when vehicle class changes
+    this.filteredTracks = this.trackService.getTracksByVehicleClass(
+      this.selectedVehicleClass
+    );
   }
 
   startPractice(): void {

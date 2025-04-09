@@ -1,14 +1,17 @@
+import { Hardware } from './../models/hardware.model';
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { Track } from '../models/track.model';
 import { VehicleClass } from '../models/vehicle.model';
-import { DriverDataService } from './driver-state.service';
+import { DriverService } from './driver.service';
 import { GameLoopService } from './game-loop.service';
 import { TrainingService } from './training.service';
+import { HardwareService } from './hardware.service';
 
 describe('Training Integration', () => {
   let gameLoopService: GameLoopService;
+  let hardwareService: HardwareService;
   let trainingService: TrainingService;
-  let driverDataService: DriverDataService;
+  let driverService: DriverService;
 
   // Sample track and vehicle class for testing
   const testTrack: Track = {
@@ -26,16 +29,17 @@ describe('Training Integration', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [GameLoopService, TrainingService, DriverDataService],
+      providers: [GameLoopService, TrainingService, DriverService],
     });
 
     // Get service instances
+    hardwareService = TestBed.inject(HardwareService);
     gameLoopService = TestBed.inject(GameLoopService);
     trainingService = TestBed.inject(TrainingService);
-    driverDataService = TestBed.inject(DriverDataService);
+    driverService = TestBed.inject(DriverService);
 
     // Reset driver skills before each test
-    driverDataService.driver.skills = {
+    driverService.driver.skills = {
       linesAndApex: 1,
       brakeControl: 1,
       throttleControl: 1,
@@ -48,18 +52,16 @@ describe('Training Integration', () => {
     };
 
     // Reset vehicle-specific skills
-    driverDataService.driver.specificSkills = {};
+    driverService.driver.specificSkills = {};
   });
 
   it('should properly start training and improve driver skills', fakeAsync(() => {
     // Store initial skill values for comparison
-    const initialApexSkill = driverDataService.driver.skills.linesAndApex;
-    const initialBrakeSkill = driverDataService.driver.skills.brakeControl;
+    const initialApexSkill = driverService.driver.skills.linesAndApex;
+    const initialBrakeSkill = driverService.driver.skills.brakeControl;
 
     // No specific skills for this vehicle class yet
-    expect(
-      driverDataService.driver.specificSkills[testVehicle]
-    ).toBeUndefined();
+    expect(driverService.driver.specificSkills[testVehicle]).toBeUndefined();
 
     // Start a training session - set short interval for testing
     trainingService.startLiveTraining(testTrack, testVehicle, 5, 100);
@@ -79,30 +81,31 @@ describe('Training Integration', () => {
     expect(trainingService.trainingSession?.lapTimes.length).toBe(5);
 
     // Check that driver skills have improved
-    expect(driverDataService.driver.skills.linesAndApex).toBeGreaterThan(
+    expect(driverService.driver.skills.linesAndApex).toBeGreaterThan(
       initialApexSkill
     );
-    expect(driverDataService.driver.skills.consistency).toBeGreaterThan(1);
+    expect(driverService.driver.skills.consistency).toBeGreaterThan(1);
 
     // Check that vehicle-specific skills were created
-    expect(driverDataService.driver.specificSkills[testVehicle]).toBeDefined();
+    expect(driverService.driver.specificSkills[testVehicle]).toBeDefined();
     expect(
-      driverDataService.driver.specificSkills[testVehicle]!.linesAndApex
+      driverService.driver.specificSkills[testVehicle]!.linesAndApex
     ).toBeGreaterThan(0);
     expect(
-      driverDataService.driver.specificSkills[testVehicle]!.brakeControl
+      driverService.driver.specificSkills[testVehicle]!.brakeControl
     ).toBeGreaterThan(0);
 
     // Calculate effective skill with hardware bonuses
-    const effectiveSkill = gameLoopService.getEffectiveSkill(
+    const effectiveSkill = driverService.getEffectiveSkill(
       'linesAndApex',
-      testVehicle
+      testVehicle,
+      hardwareService.getHardwareBonus()
     );
 
     // Should be base skill + vehicle-specific skill (no hardware bonuses in this test)
     expect(effectiveSkill).toBe(
-      driverDataService.driver.skills.linesAndApex +
-        driverDataService.driver.specificSkills[testVehicle]!.linesAndApex!
+      driverService.driver.skills.linesAndApex +
+        driverService.driver.specificSkills[testVehicle]!.linesAndApex!
     );
   }));
 
@@ -113,11 +116,7 @@ describe('Training Integration', () => {
     expect(gameLoopService.ownedHardware.length).toBe(1);
 
     // Calculate lap time without hardware
-    const baseTime = driverDataService.calculateLapTime(
-      testTrack,
-      testVehicle,
-      {}
-    );
+    const baseTime = driverService.calculateLapTime(testTrack, testVehicle, {});
 
     // Get time with hardware bonuses
     const timeWithHardware = gameLoopService.driveLap(testTrack, testVehicle);

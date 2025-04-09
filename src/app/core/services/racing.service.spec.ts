@@ -1,16 +1,16 @@
 // src/app/core/services/race.service.spec.ts
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { GameLoopService } from './game-loop.service';
-import { DriverDataService } from './driver-state.service';
+import { DriverService } from './driver.service';
 import { Track } from '../models/track.model';
 import { VehicleClass } from '../models/vehicle.model';
 import { RaceConfig } from '../models/race.model';
 import { RaceService } from './racing.service';
 
-fdescribe('RaceService', () => {
+describe('RaceService', () => {
   let service: RaceService;
   let gameLoopService: GameLoopService;
-  let driverDataService: DriverDataService;
+  let driverDataService: DriverService;
 
   // Sample race configuration for testing
   const testTrack: Track = {
@@ -38,12 +38,12 @@ fdescribe('RaceService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [RaceService, GameLoopService, DriverDataService],
+      providers: [RaceService, GameLoopService, DriverService],
     });
 
     service = TestBed.inject(RaceService);
     gameLoopService = TestBed.inject(GameLoopService);
-    driverDataService = TestBed.inject(DriverDataService);
+    driverDataService = TestBed.inject(DriverService);
 
     // Set up player driver with some skills
     driverDataService.driver.skills = {

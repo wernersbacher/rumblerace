@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Track } from '../models/track.model';
 import { VehicleClass } from '../models/vehicle.model';
 import { TrainingSession } from '../models/training.model';
-import { DriverDataService } from './driver-state.service';
+import { DriverService } from './driver.service';
 
 @Injectable({
   providedIn: 'root',
@@ -12,7 +12,7 @@ export class TrainingService {
   private interval: any;
   private skillGains: { [key: string]: number } = {};
 
-  constructor(private driverData: DriverDataService) {}
+  constructor(private driverData: DriverService) {}
 
   startLiveTraining(
     track: Track,

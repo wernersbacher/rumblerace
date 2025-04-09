@@ -4,14 +4,15 @@ import { SkillSet } from '../models/skills.model';
 import { Track } from '../models/track.model';
 import { VehicleClass } from '../models/vehicle.model';
 import { calculateLapTime } from '../utils/lap-time-calculator';
+import { HardwareService } from './hardware.service';
 
 @Injectable({
   providedIn: 'root',
 })
-export class DriverDataService {
+export class DriverService {
   driver: Driver;
 
-  constructor() {
+  constructor(private hardwareService: HardwareService) {
     this.driver = {
       name: 'Player 1',
       xp: 0,
@@ -61,7 +62,7 @@ export class DriverDataService {
     specSkills.brakeControl = (specSkills.brakeControl || 0) + gain * 0.5;
   }
 
-  getEffectiveSkill(
+  public getEffectiveSkill(
     skillName: keyof SkillSet,
     vehicleClass: VehicleClass,
     hardwareBonus: Partial<SkillSet>
@@ -90,6 +91,22 @@ export class DriverDataService {
       (sum, value) => sum + value,
       0
     );
+  }
+
+  getHardwareBonus(): Partial<SkillSet> {
+    return this.hardwareService.getHardwareBonus();
+  }
+
+  getAllEffectiveSkills(vehicleClass: VehicleClass): Partial<SkillSet> {
+    const skills: Partial<SkillSet> = {};
+    for (const skillName in this.driver.skills) {
+      skills[skillName as keyof SkillSet] = this.getEffectiveSkill(
+        skillName as keyof SkillSet,
+        vehicleClass,
+        this.getHardwareBonus()
+      );
+    }
+    return skills;
   }
 
   getDriverSave(): any {

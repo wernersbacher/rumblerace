@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { Currency } from 'src/app/core/models/economy.model';
-import { GameLoopService } from 'src/app/core/services/game-loop.service';
+import { CurrencyService } from 'src/app/core/services/currency.service';
 
 @Component({
   selector: 'app-currency-display',
@@ -12,9 +12,9 @@ import { GameLoopService } from 'src/app/core/services/game-loop.service';
   `,
 })
 export class CurrencyDisplayComponent {
-  constructor(private gameLoopService: GameLoopService) {}
+  constructor(private currencyService: CurrencyService) {}
 
   get currency(): Currency {
-    return this.gameLoopService.currency;
+    return this.currencyService.currency;
   }
 }

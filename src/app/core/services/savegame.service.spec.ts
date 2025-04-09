@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { GameLoopService } from './game-loop.service';
-import { DriverDataService } from './driver-state.service';
+import { DriverService } from './driver.service';
 import { HardwareService } from './hardware.service';
 import { SaveGameService } from './savegame.service';
 import { VehicleClass } from '../models/vehicle.model';
@@ -9,7 +9,7 @@ import { Track } from '../models/track.model';
 
 describe('GameLoopService Save/Load Integration', () => {
   let gameLoopService: GameLoopService;
-  let driverDataService: DriverDataService;
+  let driverDataService: DriverService;
   let hardwareService: HardwareService;
   let saveGameService: SaveGameService;
 
@@ -288,7 +288,7 @@ function setup() {
   TestBed.configureTestingModule({
     providers: [
       GameLoopService,
-      DriverDataService,
+      DriverService,
       HardwareService,
       SaveGameService,
     ],
@@ -296,7 +296,7 @@ function setup() {
 
   // Initialize services
   const gameLoop = TestBed.inject(GameLoopService);
-  const driverData = TestBed.inject(DriverDataService);
+  const driverData = TestBed.inject(DriverService);
   const hardware = TestBed.inject(HardwareService);
   const saveGame = TestBed.inject(SaveGameService);
 

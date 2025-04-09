@@ -1,7 +1,7 @@
 import { RaceDriver } from '../models/race.model';
 import { Race } from './core';
 import { DAMAGE_PENALTY } from './damage';
-fdescribe('Race', () => {
+describe('Race', () => {
   let race: Race;
   let drivers: RaceDriver[];
 

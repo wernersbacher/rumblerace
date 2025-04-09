@@ -4,6 +4,7 @@ import { STARTING_HARDWARE } from '../data/hardware.data';
 import { Hardware } from '../models/hardware.model';
 import { SkillSet } from '../models/skills.model';
 import { calcResellValue } from '../utils/economy';
+import { CurrencyService } from './currency.service';
 
 @Injectable({
   providedIn: 'root',
@@ -13,7 +14,7 @@ export class HardwareService {
 
   availableHardware: Hardware[] = STARTING_HARDWARE;
 
-  constructor() {}
+  constructor(private currenyService: CurrencyService) {}
 
   getHardwareBonus(): Partial<SkillSet> {
     const bonuses: Partial<SkillSet> = {};
@@ -27,37 +28,31 @@ export class HardwareService {
     return bonuses;
   }
 
-  buyHardware(
-    hardwareId: string,
-    currency: Currency
-  ): { success: boolean; currency: Currency } {
+  buyHardware(hardwareId: string): boolean {
     const item = this.availableHardware.find((h) => h.id === hardwareId);
-    if (!item || item.cost > currency.money) {
-      return { success: false, currency: currency };
+    if (!item || item.cost > this.currenyService.currency.money) {
+      return false;
     }
 
-    const remainingMoney = currency.money - item.cost;
+    this.currenyService.subtractMoney(item.cost);
     this.ownedHardware.push(item);
-    return { success: true, currency: { ...currency, money: remainingMoney } };
+    return true;
   }
 
-  sellHardware(
-    hardwareId: string,
-    currency: Currency
-  ): { success: boolean; currency: Currency } {
+  public sellHardware(hardwareId: string): boolean {
     const index = this.ownedHardware.findIndex((h) => h.id === hardwareId);
     if (index === -1) {
-      return { success: false, currency: currency };
+      console.log('Hardware to sell could not be found.');
+      return false;
     }
 
     const item = this.ownedHardware[index];
     const sellValue = calcResellValue(item);
 
-    const newMoney = currency.money + sellValue;
     this.ownedHardware.splice(index, 1);
-    this.availableHardware.push(item);
+    this.currenyService.addMoney(sellValue);
 
-    return { success: true, currency: { ...currency, money: newMoney } };
+    return true;
   }
 
   // Methods for save/load functionality

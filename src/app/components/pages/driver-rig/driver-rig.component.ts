@@ -6,6 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { CardModule } from 'primeng/card';
 import { calcResellValue } from 'src/app/core/utils/economy';
+import { HardwareService } from 'src/app/core/services/hardware.service';
 
 @Component({
   selector: 'app-driver-rig',
@@ -67,10 +68,10 @@ export class DriverRigComponent {
   ];
   calcResellValue = calcResellValue;
 
-  constructor(private gameLoopService: GameLoopService) {}
+  constructor(private hardwareService: HardwareService) {}
 
   get ownedHardware(): Hardware[] {
-    return this.gameLoopService.ownedHardware;
+    return this.hardwareService.ownedHardware;
   }
 
   getHardwareByCategory(category: string): Hardware[] {
@@ -80,7 +81,7 @@ export class DriverRigComponent {
   }
 
   sellHardware(hardware: Hardware) {
-    const success = this.gameLoopService.sellHardware(hardware.id);
+    const success = this.hardwareService.sellHardware(hardware.id);
     if (!success) {
       alert('Unable to sell the hardware!');
     }

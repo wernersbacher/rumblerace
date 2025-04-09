@@ -1,4 +1,4 @@
-// src/app/core/services/race.service.ts
+// src/app/core/services/racing.service.ts
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
 import { Driver } from '../models/driver.model';
@@ -11,9 +11,9 @@ import {
   RaceState,
 } from '../models/race.model';
 import { SkillSet } from '../models/skills.model';
-import { DriverDataService } from './driver-state.service';
-import { GameLoopService } from './game-loop.service';
+import { DriverService } from './driver.service';
 import { Race } from '../racelogic/core';
+import { CurrencyService } from './currency.service';
 
 @Injectable({
   providedIn: 'root',
@@ -33,8 +33,8 @@ export class RaceService {
   private playerDriver: Driver | null = null;
 
   constructor(
-    private driverDataService: DriverDataService,
-    private gameLoopService: GameLoopService
+    private driverDataService: DriverService,
+    private currencyService: CurrencyService
   ) {}
 
   get raceUpdates() {
@@ -71,7 +71,7 @@ export class RaceService {
     const raceDrivers: RaceDriver[] = [];
 
     // Add player
-    const playerEffectiveSkills = this.gameLoopService.getAllEffectiveSkills(
+    const playerEffectiveSkills = this.driverDataService.getAllEffectiveSkills(
       config.vehicleClass
     );
     const playerBaseLapTime = this.calculateBaseLapTime(
@@ -282,9 +282,9 @@ export class RaceService {
     const baseCurrency = 50;
     const currencyGain = baseCurrency * positionMultiplier;
 
-    // Apply rewards
+    // Apply rewards through driver service
     this.driverDataService.addXP(xpGain);
-    this.gameLoopService.currency.money += currencyGain;
+    this.currencyService.addMoney(currencyGain);
 
     // Improve player skills based on race performance
     this.driverDataService.improveSkills(VehicleClass.GT3, 0.05); // Add more tracking for specific vehicle class

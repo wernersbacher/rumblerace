@@ -5,6 +5,7 @@ import { VehicleClass } from 'src/app/core/models/vehicle.model';
 import { GameLoopService } from 'src/app/core/services/game-loop.service';
 import { MatSelectModule } from '@angular/material/select';
 import { VehicleSelectorComponent } from '../shared/vehicle-select.component';
+import { DriverService } from 'src/app/core/services/driver.service';
 
 @Component({
   selector: 'app-driver',
@@ -72,7 +73,7 @@ export class DriverSkillsComponent implements OnInit, OnDestroy {
   private selectedVehicleClass: VehicleClass = VehicleClass.GT3; // same as default in VehicleSelectorComponent
   private refreshInterval: any;
 
-  constructor(private gameLoopService: GameLoopService) {}
+  constructor(private driverService: DriverService) {}
 
   ngOnInit(): void {
     this.refreshEffectiveSkills();
@@ -102,7 +103,7 @@ export class DriverSkillsComponent implements OnInit, OnDestroy {
 
   private refreshEffectiveSkills(): void {
     if (this.selectedVehicleClass) {
-      this.effectiveSkills = this.gameLoopService.getAllEffectiveSkills(
+      this.effectiveSkills = this.driverService.getAllEffectiveSkills(
         this.selectedVehicleClass
       );
     }
