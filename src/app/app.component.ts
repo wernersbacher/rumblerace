@@ -97,6 +97,11 @@ export class AppComponent implements OnInit, OnDestroy {
       icon: 'pi pi-clock',
       routerLink: '/practice-session',
     },
+    {
+      label: 'Race Session',
+      icon: 'pi pi-flag',
+      routerLink: '/race-session',
+    },
   ];
 
   saveSlotName: string = '';
