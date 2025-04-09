@@ -1,6 +1,6 @@
 // src/app/core/services/racing.service.ts
 import { Injectable } from '@angular/core';
-import { Subject } from 'rxjs';
+import { Subject, Subscription } from 'rxjs';
 import { Driver } from '../models/driver.model';
 import { Track } from '../models/track.model';
 import { VehicleClass } from '../models/vehicle.model';
@@ -14,6 +14,7 @@ import { SkillSet } from '../models/skills.model';
 import { DriverService } from './driver.service';
 import { Race } from '../racelogic/core';
 import { CurrencyService } from './currency.service';
+import { TimerService } from './timer.service';
 
 @Injectable({
   providedIn: 'root',
@@ -27,6 +28,7 @@ export class RaceService {
     logs: [],
   };
 
+  private timerSubscription: Subscription | null = null;
   private raceUpdate$ = new Subject<RaceState>();
   private raceComplete$ = new Subject<RaceResult[]>();
   private aiDrivers: Driver[] = [];
@@ -34,7 +36,8 @@ export class RaceService {
 
   constructor(
     private driverDataService: DriverService,
-    private currencyService: CurrencyService
+    private currencyService: CurrencyService,
+    private timerService: TimerService
   ) {}
 
   get raceUpdates() {
@@ -187,32 +190,37 @@ export class RaceService {
   private simulateRace(): void {
     if (!this.race) return;
 
-    // We'll use a timeout to simulate the race step by step with UI updates
-    const simulateStep = () => {
-      if (!this.race || !this.raceState.isActive) return;
+    // Cancel any existing timer
+    if (this.timerSubscription) {
+      this.timerSubscription.unsubscribe();
+      this.timerSubscription = null;
+    }
 
-      this.raceState.currentTime += this.race.dt;
-      this.race.processSimulationTick(this.raceState.currentTime);
+    // Set up simulation interval (100ms)
+    this.timerSubscription = this.timerService
+      .createTimer(100)
+      .subscribe(() => {
+        if (!this.race || !this.raceState.isActive) {
+          this.timerService.stopTimer();
+          return;
+        }
 
-      // Update race state from simulation
-      this.updateRaceState();
+        this.raceState.currentTime += this.race.dt;
+        this.race.processSimulationTick(this.raceState.currentTime);
 
-      // Emit the current state
-      this.raceUpdate$.next({ ...this.raceState });
+        // Update race state from simulation
+        this.updateRaceState();
 
-      // Check if race is complete
-      const isComplete = this.race.drivers.every((driver) => driver.finished);
+        // Emit the current state
+        this.raceUpdate$.next({ ...this.raceState });
 
-      if (isComplete) {
-        this.completeRace();
-      } else {
-        // Continue simulation
-        setTimeout(simulateStep, 100); // Update every 100ms
-      }
-    };
+        // Check if race is complete
+        const isComplete = this.race.drivers.every((driver) => driver.finished);
 
-    // Start simulation loop
-    simulateStep();
+        if (isComplete) {
+          this.completeRace();
+        }
+      });
   }
 
   private updateRaceState(): void {
@@ -228,6 +236,13 @@ export class RaceService {
     if (!this.race) return;
 
     this.raceState.isActive = false;
+
+    // Stop the timer
+    if (this.timerSubscription) {
+      this.timerSubscription.unsubscribe();
+      this.timerSubscription = null;
+    }
+    this.timerService.stopTimer();
 
     // Process results
     const results = this.processRaceResults();
@@ -297,6 +312,13 @@ export class RaceService {
   cancelRace(): void {
     this.raceState.isActive = false;
     this.race = null;
+
+    // Stop the timer
+    if (this.timerSubscription) {
+      this.timerSubscription.unsubscribe();
+      this.timerSubscription = null;
+    }
+    this.timerService.stopTimer();
   }
 
   getRaceState(): RaceState {
