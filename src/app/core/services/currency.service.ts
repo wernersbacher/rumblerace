@@ -1,14 +1,12 @@
 import { Injectable } from '@angular/core';
 import { Currency } from '../models/economy.model';
+import { INITIAL_CURRENCY } from '../data/currency.data';
 
 @Injectable({
   providedIn: 'root',
 })
 export class CurrencyService {
-  public currency: Currency = {
-    money: 3000,
-    rating: 0,
-  };
+  public currency: Currency = { ...INITIAL_CURRENCY };
 
   addMoney(amount: number): void {
     if (amount > 0) {
@@ -29,7 +27,7 @@ export class CurrencyService {
   }
 
   public resetCurrency(): void {
-    this.currency = { money: 3000, rating: 0 };
+    this.currency = { ...INITIAL_CURRENCY };
   }
 
   public getCurrencySave(): Currency {

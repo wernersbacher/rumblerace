@@ -1,3 +1,4 @@
+import { CurrencyService } from 'src/app/core/services/currency.service';
 // src/app/core/services/race.service.spec.ts
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { GameLoopService } from './game-loop.service';
@@ -11,6 +12,7 @@ describe('RaceService', () => {
   let service: RaceService;
   let gameLoopService: GameLoopService;
   let driverDataService: DriverService;
+  let currencyService: CurrencyService;
 
   // Sample race configuration for testing
   const testTrack: Track = {
@@ -44,6 +46,7 @@ describe('RaceService', () => {
     service = TestBed.inject(RaceService);
     gameLoopService = TestBed.inject(GameLoopService);
     driverDataService = TestBed.inject(DriverService);
+    currencyService = TestBed.inject(CurrencyService);
 
     // Set up player driver with some skills
     driverDataService.driver.skills = {
@@ -209,7 +212,7 @@ describe('RaceService', () => {
   describe('race rewards', () => {
     it('should award XP and money for completed races', fakeAsync(() => {
       const initialXP = driverDataService.driver.xp;
-      const initialMoney = gameLoopService.currency.money;
+      const initialMoney = currencyService.currency.money;
 
       // Create a race that will finish immediately
       const mockRace: any = {
@@ -235,7 +238,7 @@ describe('RaceService', () => {
 
       // Verify rewards were given
       expect(driverDataService.driver.xp).toBeGreaterThan(initialXP);
-      expect(gameLoopService.currency.money).toBeGreaterThan(initialMoney);
+      expect(currencyService.currency.money).toBeGreaterThan(initialMoney);
 
       // Clean up timers
       service.cancelRace();

@@ -5,6 +5,7 @@ import { Track } from '../models/track.model';
 import { VehicleClass } from '../models/vehicle.model';
 import { calculateLapTime } from '../utils/lap-time-calculator';
 import { HardwareService } from './hardware.service';
+import { createEmptySkillSet, INITIAL_DRIVER } from '../data/drivers.data';
 
 @Injectable({
   providedIn: 'root',
@@ -13,26 +14,7 @@ export class DriverService {
   driver: Driver;
 
   constructor(private hardwareService: HardwareService) {
-    this.driver = {
-      name: 'Player 1',
-      xp: 0,
-      skills: this.createEmptySkillSet(),
-      specificSkills: {},
-    };
-  }
-
-  private createEmptySkillSet(): SkillSet {
-    return {
-      linesAndApex: 0,
-      brakeControl: 0,
-      throttleControl: 0,
-      consistency: 0,
-      tireManagement: 0,
-      trackAwareness: 0,
-      racecraft: 0,
-      setupUnderstanding: 0,
-      adaptability: 0,
-    };
+    this.driver = { ...INITIAL_DRIVER };
   }
 
   calculateLapTime(
@@ -128,7 +110,7 @@ export class DriverService {
         name: driverData.name || 'Player 1',
         xp: driverData.xp || 0,
         skills: {
-          ...this.createEmptySkillSet(),
+          ...createEmptySkillSet(),
           ...driverData.skills,
         },
         specificSkills: driverData.specificSkills || {},
@@ -149,11 +131,6 @@ export class DriverService {
   }
 
   resetDriver(): void {
-    this.driver = {
-      name: 'Player 1',
-      xp: 0,
-      skills: this.createEmptySkillSet(),
-      specificSkills: {},
-    };
+    this.driver = { ...INITIAL_DRIVER };
   }
 }

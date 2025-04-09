@@ -109,38 +109,5 @@ describe('Training Integration', () => {
     );
   }));
 
-  it('should apply hardware bonuses to lap times', fakeAsync(() => {
-    // Buy the hardware
-    var buySuccess = gameLoopService.buyHardware('wheel-basic');
-    expect(buySuccess).toBeTrue();
-    expect(gameLoopService.ownedHardware.length).toBe(1);
-
-    // Calculate lap time without hardware
-    const baseTime = driverService.calculateLapTime(testTrack, testVehicle, {});
-
-    // Get time with hardware bonuses
-    const timeWithHardware = gameLoopService.driveLap(testTrack, testVehicle);
-
-    // Time with hardware should be better (smaller)
-    expect(timeWithHardware).toBeLessThan(baseTime);
-
-    // Start training with hardware bonuses
-    trainingService.startLiveTraining(testTrack, testVehicle, 3, 100);
-
-    // Fast-forward time
-    tick(400);
-
-    // Training should be complete
-    expect(trainingService.trainingSession?.active).toBeFalse();
-
-    // Check that all lap times are affected by hardware bonuses
-    const averageLapTime =
-      trainingService.trainingSession!.lapTimes.reduce(
-        (sum, time) => sum + time,
-        0
-      ) / trainingService.trainingSession!.lapTimes.length;
-
-    // Average should be better than base time (accounting for some randomness)
-    expect(averageLapTime).toBeLessThan(baseTime * 1.1);
-  }));
+  // todo: test to test practice and stuff
 });

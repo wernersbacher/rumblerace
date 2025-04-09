@@ -20,10 +20,6 @@ export class GameLoopService {
     private raceService: RaceService
   ) {}
 
-  get driver() {
-    return this.driverDataService.driver;
-  }
-
   getTracks(): Track[] {
     return BEGINNER_TRACKS;
   }
