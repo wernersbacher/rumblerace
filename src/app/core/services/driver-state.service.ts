@@ -92,7 +92,7 @@ export class DriverDataService {
     );
   }
 
-  getSaveState(): any {
+  getDriverSave(): any {
     // Return a deep copy to prevent reference issues
     return {
       name: this.driver.name,
@@ -103,7 +103,7 @@ export class DriverDataService {
     };
   }
 
-  loadSaveState(driverData: any): boolean {
+  loadDriverSave(driverData: any): boolean {
     if (!driverData) return false;
 
     try {

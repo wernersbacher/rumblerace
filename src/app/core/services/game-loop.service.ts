@@ -9,17 +9,14 @@ import { HardwareService } from './hardware.service';
 import { SaveGameData } from '../models/gamesave';
 import { BEGINNER_TRACKS } from '../data/tracks.data';
 import { RaceService } from './racing.service';
+import { CurrencyService } from './currency.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class GameLoopService {
-  currency: Currency = {
-    money: 3000,
-    rating: 0,
-  };
-
   constructor(
+    private currencyService: CurrencyService,
     private driverDataService: DriverDataService,
     private hardwareService: HardwareService,
     private saveGameService: SaveGameService,
@@ -43,19 +40,35 @@ export class GameLoopService {
   }
 
   buyHardware(hardwareId: string): boolean {
-    const result = this.hardwareService.buyHardware(hardwareId, this.currency);
+    const currentCurrency = this.currencyService.getCurrencySave();
+    const result = this.hardwareService.buyHardware(
+      hardwareId,
+      currentCurrency
+    );
     if (result.success) {
-      this.currency = result.currency;
+      this.currencyService.loadCurrencySave(result.currency);
+    }
+    return result.success;
+  }
+
+  sellHardware(hardwareId: string): boolean {
+    const currentCurrency = this.currencyService.getCurrencySave();
+    const result = this.hardwareService.sellHardware(
+      hardwareId,
+      currentCurrency
+    );
+    if (result.success) {
+      this.currencyService.loadCurrencySave(result.currency);
     }
     return result.success;
   }
 
   driveLap(track: Track, vehicleClass: VehicleClass): number {
-    var hardWareBonus = this.getHardwareBonus();
+    const hardwareBonus = this.getHardwareBonus();
     const lapTime = this.driverDataService.calculateLapTime(
       track,
       vehicleClass,
-      hardWareBonus
+      hardwareBonus
     );
     this.driverDataService.improveSkills(vehicleClass);
     return lapTime;
@@ -83,14 +96,6 @@ export class GameLoopService {
     return skills;
   }
 
-  sellHardware(hardwareId: string): boolean {
-    const result = this.hardwareService.sellHardware(hardwareId, this.currency);
-    if (result.success) {
-      this.currency = result.currency;
-    }
-    return result.success;
-  }
-
   getTracks(): Track[] {
     return BEGINNER_TRACKS;
   }
@@ -99,9 +104,9 @@ export class GameLoopService {
     return {
       version: 1, // Add version for future compatibility
       timestamp: new Date().toISOString(),
-      driver: this.driverDataService.getSaveState(),
-      currency: this.currency,
-      hardware: this.hardwareService.getHardwareState(),
+      driver: this.driverDataService.getDriverSave(),
+      currency: this.currencyService.getCurrencySave(),
+      hardware: this.hardwareService.getHardwareSave(),
     };
   }
 
@@ -113,7 +118,7 @@ export class GameLoopService {
 
   // Method to load game state from localStorage
   loadGame(slotName: string = 'auto'): boolean {
-    var saveData = this.saveGameService.loadGame(slotName);
+    const saveData = this.saveGameService.loadGame(slotName);
     if (!saveData) return false;
     return this.loadSaveGameState(saveData);
   }
@@ -127,21 +132,20 @@ export class GameLoopService {
     if (!saveData) return false;
 
     // Load currency
-    this.currency = saveData.currency;
+    this.currencyService.loadCurrencySave(saveData.currency);
 
     // Load driver data
-    this.driverDataService.loadSaveState(saveData.driver);
+    this.driverDataService.loadDriverSave(saveData.driver);
 
     // Load hardware data
-    this.hardwareService.loadHardwareState(saveData.hardware);
+    this.hardwareService.loadHardwareSave(saveData.hardware);
 
     return true;
   }
 
   resetGame(): void {
     // Reset currency to default values
-    // todo: move to inital value
-    this.currency = { money: 3000, rating: 0 };
+    this.currencyService.resetCurrency();
 
     // Reset driver data
     this.driverDataService.resetDriver();

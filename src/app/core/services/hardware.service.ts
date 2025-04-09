@@ -61,11 +61,11 @@ export class HardwareService {
   }
 
   // Methods for save/load functionality
-  getHardwareState() {
+  getHardwareSave() {
     return this.ownedHardware;
   }
 
-  loadHardwareState(ownedHardware: Hardware[]): boolean {
+  loadHardwareSave(ownedHardware: Hardware[]): boolean {
     try {
       // Handle owned hardware
       if (Array.isArray(ownedHardware)) {
