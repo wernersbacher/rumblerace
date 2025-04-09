@@ -45,6 +45,10 @@ export class RaceService {
     return this.raceComplete$.asObservable();
   }
 
+  getRace() {
+    return { ...this.race };
+  }
+
   startRace(config: RaceConfig): void {
     if (this.raceState.isActive) {
       return;
