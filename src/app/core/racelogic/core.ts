@@ -267,11 +267,6 @@ export class Race {
     return leaderProgress - driverProgress;
   }
 
-  /**
-   * Prüft, ob ein Fahrer eine Runde abgeschlossen hat oder das Rennen beendet hat
-   * @param driver Der zu prüfende Fahrer
-   * @param actualSpeed Die aktuelle Geschwindigkeit in m/s
-   */
   checkLapCompletion(driver: RaceDriver, actualSpeed: number): void {
     if (driver.trackPosition < this.trackLength) {
       return;
@@ -282,16 +277,43 @@ export class Race {
     // Time adjustment = fraction of the time step that was used to reach the finish line
     const timeAdjustment = actualSpeed > 0 ? overrunDistance / actualSpeed : 0;
 
-    if (driver.currentLap > 1) {
-      const lapCompleteTime = driver.totalTime - timeAdjustment;
-      driver.lastLapTime = lapCompleteTime;
+    // Calculate this lap's time based on whether it's the first lap or a subsequent lap
+    let lapTime;
+    if (driver.currentLap === 1) {
+      // For the first lap, it's simply the adjusted total time
+      lapTime = driver.totalTime - timeAdjustment;
+    } else {
+      // For subsequent laps, calculate the time since the last lap completion
+      const previousLapsTotal = driver.lapTimes.reduce(
+        (sum, time) => sum + time,
+        0
+      );
+      lapTime = driver.totalTime - previousLapsTotal - timeAdjustment;
     }
 
-    // Adjust total time to represent the exact finish time
-    driver.totalTime -= timeAdjustment;
+    // Store lap time information
+    if (driver.currentLap >= 1) {
+      driver.lastLapTime = lapTime;
 
+      // Store the lap time in the array
+      driver.lapTimes.push(lapTime);
+
+      // Update best lap time if this is faster or first lap
+      if (driver.bestLapTime === undefined || lapTime < driver.bestLapTime) {
+        driver.bestLapTime = lapTime;
+      }
+
+      // Update log with best lap info
+      const bestLapInfo = lapTime === driver.bestLapTime ? ' (Best Lap!)' : '';
+      this.addToLog(
+        `${driver.driver.name} sets lap time: ${lapTime.toFixed(
+          3
+        )}s${bestLapInfo}`
+      );
+    }
+
+    // Update driver's position for the next lap
     driver.currentLap++;
-    // Überschüssige Strecke zum Übertrag in die nächste Runde:
     driver.trackPosition = overrunDistance;
 
     // Update log with lap time information
@@ -305,7 +327,7 @@ export class Race {
       } (Gesamtzeit: ${driver.totalTime.toFixed(3)}s)${lapTimeInfo}`
     );
 
-    // Prüfe, ob das Rennen vorbei ist
+    // Check if race is over...
     if (driver.currentLap > this.numLaps) {
       driver.finished = true;
       this.addToLog(

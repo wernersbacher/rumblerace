@@ -104,6 +104,7 @@ export class RaceService {
       finished: false,
       totalTime: 0,
       overtakeCooldown: 0,
+      lapTimes: [],
     });
 
     // Add AI drivers
@@ -129,6 +130,7 @@ export class RaceService {
         finished: false,
         totalTime: 0,
         overtakeCooldown: 0,
+        lapTimes: [],
       });
     });
 
@@ -277,7 +279,7 @@ export class RaceService {
         position: index + 1,
         driver: originalDriver,
         totalTime: raceDriver.totalTime,
-        bestLap: 0, // We would need to track this in the race simulation
+        bestLap: raceDriver.bestLapTime || 0,
         damage: raceDriver.damage,
         timeDelta: index === 0 ? 0 : raceDriver.totalTime - winnerTime,
       };

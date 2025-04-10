@@ -123,6 +123,7 @@ import { Subscription } from 'rxjs';
                 <th>Driver</th>
                 <th>Lap</th>
                 <th>Last Lap</th>
+                <th>Best Lap</th>
                 <th>Gap</th>
                 <th>Damage</th>
               </tr>
@@ -139,7 +140,14 @@ import { Subscription } from 'rxjs';
                 </td>
                 <td>
                   {{
-                    i === 0 ? '-' : '+' + formatTime(driver.timeDeltaToAhead)
+                    driver.bestLapTime ? formatTime(driver.bestLapTime) : '-'
+                  }}
+                </td>
+                <td>
+                  {{
+                    i === 0
+                      ? '-'
+                      : '+' + formatTimeDelta(driver.timeDeltaToAhead)
                   }}
                 </td>
                 <td>
@@ -344,16 +352,35 @@ export class RacingComponent implements OnInit, OnDestroy {
     return [...this.raceState.logs].reverse();
   }
 
-  formatTime(timeInSeconds: number): string {
-    if (timeInSeconds === 0) return '0:00.000';
+  formatTime(timeInSeconds: number, millisecondDigits: number = 3): string {
+    if (timeInSeconds === 0) return `0:00.${'0'.repeat(millisecondDigits)}`;
 
     const minutes = Math.floor(timeInSeconds / 60);
     const seconds = Math.floor(timeInSeconds % 60);
-    const milliseconds = Math.floor((timeInSeconds % 1) * 1000);
+    const milliseconds = Math.floor(
+      (timeInSeconds % 1) * Math.pow(10, millisecondDigits)
+    );
 
     return `${minutes}:${seconds.toString().padStart(2, '0')}.${milliseconds
       .toString()
-      .padStart(3, '0')}`;
+      .padStart(millisecondDigits, '0')}`;
+  }
+
+  formatTimeDelta(timeInSeconds: number): string {
+    if (timeInSeconds === 0) return `0.0`;
+
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = Math.floor(timeInSeconds % 60);
+    const milliseconds = Math.floor((timeInSeconds % 1) * 10); // Always one digit
+
+    // Only show minutes if greater than 0
+    const minutePart = minutes > 0 ? `${minutes}:` : '';
+
+    // Don't pad seconds unless minutes are showing
+    const secondPart =
+      minutes > 0 ? seconds.toString().padStart(2, '0') : seconds;
+
+    return `${minutePart}${secondPart}.${milliseconds}`;
   }
 
   isPlayerResult(result: RaceResult): boolean {

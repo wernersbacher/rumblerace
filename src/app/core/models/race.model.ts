@@ -21,6 +21,8 @@ export interface RaceDriver {
   finished: boolean;
   isAttemptingOvertake?: boolean;
   lastLapTime?: number;
+  bestLapTime?: number;
+  lapTimes: number[];
   totalTime: number;
   timeDeltaToAhead?: number;
   overtakeCooldown: number;
