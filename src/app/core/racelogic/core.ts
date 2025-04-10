@@ -312,10 +312,6 @@ export class Race {
       );
     }
 
-    // Update driver's position for the next lap
-    driver.currentLap++;
-    driver.trackPosition = overrunDistance;
-
     // Update log with lap time information
     const lapTimeInfo = driver.lastLapTime
       ? ` (Rundenzeit: ${driver.lastLapTime.toFixed(3)}s)`
@@ -327,14 +323,22 @@ export class Race {
       } (Gesamtzeit: ${driver.totalTime.toFixed(3)}s)${lapTimeInfo}`
     );
 
-    // Check if race is over...
-    if (driver.currentLap > this.numLaps) {
+    // Check if this lap was last lap => finished race
+    if (driver.currentLap >= this.numLaps) {
       driver.finished = true;
+      const overrunDistance = driver.trackPosition - this.trackLength;
+      const timeAdjustment =
+        actualSpeed > 0 ? overrunDistance / actualSpeed : 0;
+      driver.totalTime -= timeAdjustment;
       this.addToLog(
         `${
           driver.driver.name
         } hat das Rennen beendet in ${driver.totalTime.toFixed(3)} Sekunden.`
       );
+    } else {
+      // Update driver's position for the next lap
+      driver.trackPosition = overrunDistance;
+      driver.currentLap += 1;
     }
   }
 

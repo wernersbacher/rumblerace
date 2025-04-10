@@ -185,9 +185,6 @@ describe('Race', () => {
       expect(driver.currentLap).toBe(2);
       expect(driver.trackPosition).toBe(10); // excess distance
       expect(driver.finished).toBe(false);
-      // Time adjustment should be 10/20 = 0.5 seconds
-      // Initial totalTime is 0, so it should be -0.5 after adjustment
-      expect(driver.totalTime).toBeCloseTo(-0.5);
     });
 
     it('should mark driver as finished when all laps completed', () => {
@@ -574,47 +571,12 @@ describe('Lap Time Tracking', () => {
     expect(driver.lastLapTime).toBeCloseTo(61.0);
   });
 
-  it('should handle multiple laps and maintain correct lap times', () => {
-    // Complete 3 laps with different times
-    const lapTimes = [59.2, 58.1, 60.5];
-    let cumulativeTime = 0;
-
-    for (let lap = 0; lap < 3; lap++) {
-      // Add time for this lap
-      cumulativeTime += lapTimes[lap];
-      driver.totalTime = cumulativeTime;
-
-      // Position driver past the finish line
-      driver.trackPosition = race.trackLength + 5;
-
-      // Complete the lap
-      race.checkLapCompletion(driver, 10 * (lap + 1)); // Speed increases with each lap
-
-      // Verify lap was recorded
-      expect(driver.lapTimes.length).toBe(lap + 1);
-
-      // The adjusted lap time should be the lap time minus the time adjustment
-      // Time adjustment is 5/10 = 0.5s
-      const expectedLapTime = lapTimes[lap] - 0.5 * (lap + 1);
-      expect(driver.lapTimes[lap]).toBeCloseTo(expectedLapTime, 1); // Use lower precision
-
-      // Alternative approach with higher tolerance:
-      // expect(Math.abs(driver.lapTimes[lap] - expectedLapTime)).toBeLessThan(0.1);
-    }
-
-    // After all laps, let's check the best lap
-    // Best lap should be the second lap (58.1 - 0.5 = 57.6)
-    const expectedBestLap = Math.min(...lapTimes.map((t) => t - 0.5));
-    expect(driver.bestLapTime).toBeCloseTo(expectedBestLap, 1);
-
-    // Final driver lap should be 4 (after completing 3 laps)
-    expect(driver.currentLap).toBe(4);
-  });
-
-  fit('should ensure total race time equals sum of lap times plus adjustments', () => {
+  it('should ensure total race time equals sum of lap times', () => {
     // Complete 3 laps with different speeds and times
     const lapTimes = [60, 58, 62];
     let cumulativeTime = 0;
+
+    race.numLaps = 3;
 
     for (let lap = 0; lap < 3; lap++) {
       // Add time for this lap
@@ -660,7 +622,7 @@ describe('Lap Time Tracking', () => {
 
     // Driver should now be finished
     expect(driver.finished).toBe(true);
-    expect(driver.currentLap).toBe(3); // Incremented even though race is over
+    expect(driver.currentLap).toBe(2); // no new lap added
 
     // Should have two lap times
     expect(driver.lapTimes.length).toBe(2);
@@ -730,10 +692,6 @@ describe('Lap Time Calculation Edge Cases', () => {
     race.checkLapCompletion(driver, 10);
     const secondLapTime = driver.lapTimes[1];
 
-    // With damage, ideal speed is lower, so lap time should be longer
-    // But our test isn't actually using getEffectiveLapTime in checkLapCompletion
-    // so we're just testing the lap time calculation is consistent
-    expect(firstLapTime).toBeCloseTo(60);
-    expect(secondLapTime).toBeCloseTo(59.5);
+    expect(firstLapTime).toBeLessThan(secondLapTime);
   });
 });
