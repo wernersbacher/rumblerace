@@ -7,6 +7,11 @@ export enum VehicleClass {
   LMP1 = 'LMP1',
 }
 
+export interface DirtyAirCharacteristics {
+  minFollowingTimeGap: number; // Minimum time gap in seconds
+  dirtyAirSensitivity: number; // How sensitive the car is to dirty air (higher = more sensitive)
+}
+
 export interface Vehicle {
   id: string;
   name: string;

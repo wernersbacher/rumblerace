@@ -19,6 +19,7 @@ export interface RaceDriver {
   currentLap: number;
   trackPosition: number;
   finished: boolean;
+  isAttemptingOvertake?: boolean;
   lastLapTime?: number;
   totalTime: number;
   timeDeltaToAhead?: number;

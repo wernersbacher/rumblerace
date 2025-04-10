@@ -7,6 +7,7 @@ import { Track } from '../models/track.model';
 import { VehicleClass } from '../models/vehicle.model';
 import { RaceConfig } from '../models/race.model';
 import { RaceService } from './racing.service';
+import { BEGINNER_TRACKS } from '../data/tracks.data';
 
 describe('RaceService', () => {
   let raceService: RaceService;
@@ -14,20 +15,7 @@ describe('RaceService', () => {
   let currencyService: CurrencyService;
 
   // Sample race configuration for testing
-  const testTrack: Track = {
-    id: 'test-track',
-    name: 'Test Circuit',
-    country: 'Test Country',
-    slowCorners: 3,
-    mediumCorners: 5,
-    fastCorners: 4,
-    straights: 2,
-    referenceLapTimes: {
-      [VehicleClass.GT3]: 90,
-      [VehicleClass.GT4]: 100,
-    },
-    difficulty: 3,
-  };
+  const testTrack: Track = BEGINNER_TRACKS[0];
 
   const testRaceConfig: RaceConfig = {
     track: testTrack,

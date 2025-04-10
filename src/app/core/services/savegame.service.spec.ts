@@ -1,3 +1,4 @@
+import { BEGINNER_TRACKS } from './../data/tracks.data';
 import { Currency } from 'src/app/core/models/economy.model';
 import { TestBed } from '@angular/core/testing';
 import { GameLoopService } from './game-loop.service';
@@ -21,22 +22,7 @@ describe('GameLoopService Save/Load Integration', () => {
   let trainingService: TrainingService;
 
   // Sample track for testing
-  const testTrack: Track = {
-    id: 'test-track',
-    name: 'Test Circuit',
-    country: 'Test Country',
-    slowCorners: 3,
-    mediumCorners: 6,
-    fastCorners: 7,
-    straights: 4,
-    referenceLapTimes: {
-      [VehicleClass.GT4]: 120,
-      [VehicleClass.GT3]: 105,
-      [VehicleClass.LMP1]: 95,
-      [VehicleClass.F1]: 85,
-    },
-    difficulty: 3,
-  };
+  const testTrack: Track = BEGINNER_TRACKS[0];
 
   beforeEach(() => {
     const testSetup = setup();

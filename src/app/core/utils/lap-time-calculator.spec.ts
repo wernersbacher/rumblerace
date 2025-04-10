@@ -102,6 +102,7 @@ describe('calculateLapTime', () => {
     track = {
       id: 'test-track',
       name: 'Test Track',
+      lengthMeters: 3000,
       slowCorners: 5,
       mediumCorners: 6,
       fastCorners: 3,

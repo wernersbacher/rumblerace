@@ -6,6 +6,7 @@ import { DriverService } from './driver.service';
 import { GameLoopService } from './game-loop.service';
 import { TrainingService } from './training.service';
 import { HardwareService } from './hardware.service';
+import { BEGINNER_TRACKS } from '../data/tracks.data';
 
 describe('Training Integration', () => {
   let gameLoopService: GameLoopService;
@@ -14,16 +15,7 @@ describe('Training Integration', () => {
   let driverService: DriverService;
 
   // Sample track and vehicle class for testing
-  const testTrack: Track = {
-    id: 'test-track',
-    name: 'Test Circuit',
-    difficulty: 3,
-    slowCorners: 3,
-    mediumCorners: 10,
-    fastCorners: 50,
-    straights: 3,
-    referenceLapTimes: { GT3: 100 },
-  };
+  const testTrack: Track = BEGINNER_TRACKS[0];
 
   const testVehicle: VehicleClass = VehicleClass.GT3;
 

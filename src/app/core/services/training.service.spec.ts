@@ -22,6 +22,7 @@ describe('TrainingService', () => {
     straights: 0,
     referenceLapTimes: { GT3: 90 },
     difficulty: 0,
+    lengthMeters: 3000,
   };
   const mockVehicleClass: VehicleClass = VehicleClass.GT3;
   const initalDriver: Driver = {

@@ -1,0 +1,6 @@
+export const SIMCONFIG = {
+  DT: 0.5, // Time step in seconds
+  DAMAGE_PENALTY: 0.2,
+  OVERTAKE_BASE_CHANCE_PER_TICK: 0.003,
+  ERROR_BASE_CHANCE_PER_TICK: 0.001,
+};

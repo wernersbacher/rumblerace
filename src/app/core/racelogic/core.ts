@@ -1,6 +1,8 @@
 import Rand from 'rand-seed';
 import { RaceConfig, RaceDriver } from '../models/race.model';
-import { DAMAGE_PENALTY } from './damage';
+import { SIMCONFIG } from './simulation';
+import { VEHICLE_AERO_CHARACTERISTICS } from '../data/vehicle.data';
+import { RacingUtils } from './racingutils';
 
 /**
  * Die Race-Klasse simuliert das Rennen in kleinen Zeitschritten (ticks).
@@ -14,13 +16,9 @@ export class Race {
   drivers: RaceDriver[] = [];
   numLaps: number;
   trackLength: number;
-  log: string[] = []; // Add at class level:
+  log: string[] = [];
   debugMode: boolean = false;
-
-  // Simulationseinstellungen:
-  readonly dt: number = 0.5; // Zeitschritt (Sekunden)
-  readonly errorBaseChance: number = 0.005; // Basiswahrscheinlichkeit für einen Fehler pro Sekunde
-  readonly overtakeBaseChance: number = 0.003; // Basischance, dass ein Überholversuch initiiert wird, wenn gedrängt
+  raceConfig: RaceConfig;
 
   constructor(
     drivers: RaceDriver[],
@@ -31,6 +29,7 @@ export class Race {
     this.rng = new Rand(config.seed);
     // Fahrer werden in Startreihenfolge im Array geliefert.
     this.drivers = drivers;
+    this.raceConfig = config;
     this.trackLength = config.track.lengthMeters;
     this.numLaps = config.numLaps;
     // Initialisiere die Simulationstate der Fahrer:
@@ -53,7 +52,7 @@ export class Race {
    */
   getEffectiveLapTime(driver: RaceDriver): number {
     // Je mehr Schaden, desto langsamer:
-    const damagePenalty = driver.damage * DAMAGE_PENALTY;
+    const damagePenalty = driver.damage * SIMCONFIG.DAMAGE_PENALTY;
     // Der Zufallsfaktor simuliert kleine Schwankungen (z. B. -0.2 bis +0.2 Sekunden)
     const randomFactor = this.rng.next() * 0.2 - 0.1;
     return driver.baseLapTime + damagePenalty + randomFactor;
@@ -76,7 +75,7 @@ export class Race {
     let simulationTime = 0;
     // Simulation läuft, bis alle Fahrer fertig sind.
     while (this.drivers.some((driver) => !driver.finished)) {
-      simulationTime += this.dt;
+      simulationTime += SIMCONFIG.DT;
       this.addToLog(' ');
       this.processSimulationTick(simulationTime);
     }
@@ -104,14 +103,18 @@ export class Race {
 
       // Calculate the update but don't apply it yet
       const idealSpeed = this.getIdealSpeed(driver);
-      const leader = this.findImmediateLeader(driver);
-      const actualSpeed = this.calculateActualSpeed(driver, idealSpeed, leader);
+      const driverAhead = this.findDriverAhead(driver);
+      const actualSpeed = this.calculateActualSpeed(
+        driver,
+        idealSpeed,
+        driverAhead
+      );
 
       // Return the update data
       return {
         driver,
-        newPosition: driver.trackPosition + actualSpeed * this.dt,
-        timeDelta: this.dt,
+        newPosition: driver.trackPosition + actualSpeed * SIMCONFIG.DT,
+        timeDelta: SIMCONFIG.DT,
         speed: actualSpeed,
       };
     });
@@ -142,35 +145,11 @@ export class Race {
   calculateActualSpeed(
     driver: RaceDriver,
     idealSpeed: number,
-    leader: RaceDriver | null
+    driverAhead: RaceDriver | null
   ): number {
     let actualSpeed = idealSpeed;
 
-    if (leader) {
-      // Berechne den Abstand zum Führer in Metern:
-      const gap = this.calculateGapToLeader(driver, leader);
-
-      // Wenn der Abstand negativ ist (wegen Überholungen) oder sehr klein,
-      // kann der Fahrer nicht schneller fahren als der Leader:
-      if (gap < 10) {
-        // Beispiel: Wenn Abstand unter 10 Meter liegt,
-        // dann wird die Geschwindigkeit auf die des Leaders reduziert.
-        actualSpeed = Math.min(actualSpeed, this.getIdealSpeed(leader));
-      }
-
-      this.addToLog(
-        `[DEBUG] ${driver.driver.name} - Pos: L${
-          driver.currentLap
-        }@${driver.trackPosition.toFixed(1)}m - ` +
-          `Speed: ${actualSpeed.toFixed(2)} m/s (${idealSpeed.toFixed(
-            2
-          )} m/s ideal) - ` +
-          `Gap to ${leader.driver.name}: ${gap.toFixed(2)}m - ` +
-          `Damage: ${driver.damage.toFixed(1)} - ` +
-          `Time: ${driver.totalTime.toFixed(1)}s`,
-        true
-      );
-    } else {
+    if (!driverAhead) {
       this.addToLog(
         `[DEBUG] ${driver.driver.name} - Pos: L${
           driver.currentLap
@@ -183,7 +162,92 @@ export class Race {
           `Time: ${driver.totalTime.toFixed(1)}s`,
         true
       );
+      return actualSpeed;
     }
+
+    // Calculate the gap to the leader in meters
+    const gap = this.calculateGapToLeader(driver, driverAhead);
+
+    // Get the vehicle aero characteristics for the current class
+    const aeroCharacteristics =
+      VEHICLE_AERO_CHARACTERISTICS[this.raceConfig.vehicleClass];
+
+    // Calculate track's dirty air factor using static method
+    const trackDirtyAirFactor = RacingUtils.calculateTrackDirtyAirFactor(
+      this.raceConfig.track
+    );
+
+    // Calculate minimum following distance using static method
+    const minTimeGap = RacingUtils.calculateMinTimeGap(
+      aeroCharacteristics,
+      driverAhead.racecraft.defense,
+      trackDirtyAirFactor
+    );
+
+    // Convert time gap to distance
+    const minDistanceGap = minTimeGap * idealSpeed;
+
+    // Check if the driver has a significant speed advantage and is close enough
+    // for a potential overtake attempt
+    const driverIdealSpeed = this.getIdealSpeed(driver);
+    const leaderIdealSpeed = this.getIdealSpeed(driverAhead);
+    const hasSpeedAdvantage = driverIdealSpeed > leaderIdealSpeed * 1.02; // 2% faster
+    const isInOvertakingRange = gap < 20; // Within reasonable range for overtaking
+    const isAggressiveEnough = driver.aggression > 2; // Driver is aggressive enough to attempt it
+
+    // If the driver has potential to overtake, allow them to get closer than normal
+    if (hasSpeedAdvantage && isInOvertakingRange && isAggressiveEnough) {
+      // Store that driver is in overtaking mode
+      driver.isAttemptingOvertake = true;
+
+      // Allow getting closer, but still maintain some physics constraints
+      if (gap < 5) {
+        // Very close: prevent collision but allow aggressive driving
+        actualSpeed = Math.min(actualSpeed, leaderIdealSpeed * 0.99);
+      } else {
+        // Close but not dangerously so: maintain small gap but allow closing in
+        actualSpeed = Math.min(
+          actualSpeed,
+          driverIdealSpeed * 0.98 + leaderIdealSpeed * 0.02
+        );
+      }
+    } else {
+      // Regular following behavior - maintain realistic gaps
+      driver.isAttemptingOvertake = false;
+
+      if (gap < minDistanceGap) {
+        // Calculate how much to slow down based on how close we are
+        const closenessRatio = Math.max(0, gap / minDistanceGap);
+        const speedFactor = 0.95 + 0.03 * closenessRatio;
+
+        // If very close, fall back slightly behind leader's speed
+        if (gap < 10) {
+          const leaderSpeed = this.getIdealSpeed(driverAhead);
+          actualSpeed = Math.min(actualSpeed, leaderSpeed * 0.98);
+        } else {
+          // Otherwise apply graduated speed reduction
+          actualSpeed = Math.min(actualSpeed, idealSpeed * speedFactor);
+        }
+      }
+    }
+
+    this.addToLog(
+      `[DEBUG] ${driver.driver.name} - Pos: L${
+        driver.currentLap
+      }@${driver.trackPosition.toFixed(1)}m - ` +
+        `Speed: ${actualSpeed.toFixed(2)} m/s (${idealSpeed.toFixed(
+          2
+        )} m/s ideal) - ` +
+        `Gap to ${driverAhead.driver.name}: ${gap.toFixed(
+          2
+        )}m (Min: ${minDistanceGap.toFixed(2)}m) - ` +
+        `Overtaking Mode: ${driver.isAttemptingOvertake} - ` +
+        `Dirty Air Factor: ${trackDirtyAirFactor.toFixed(2)} - ` +
+        `Min Time Gap: ${minTimeGap.toFixed(2)}s - ` +
+        `Damage: ${driver.damage.toFixed(1)} - ` +
+        `Time: ${driver.totalTime.toFixed(1)}s`,
+      true
+    );
 
     return actualSpeed;
   }
@@ -285,7 +349,7 @@ export class Race {
    * Calculates the chance of a driver making an error based on their aggression
    */
   calculateErrorChance(driver: RaceDriver): number {
-    return this.errorBaseChance + 0.002 * driver.aggression;
+    return SIMCONFIG.ERROR_BASE_CHANCE_PER_TICK + 0.002 * driver.aggression;
   }
 
   /**
@@ -332,36 +396,69 @@ export class Race {
   processOvertakingAttempt(driver: RaceDriver, currentTime: number): void {
     // Check if driver is on cooldown from previous overtake
     if (driver.overtakeCooldown > 0) {
-      driver.overtakeCooldown -= this.dt;
+      driver.overtakeCooldown -= SIMCONFIG.DT;
       return;
     }
 
-    const leader = this.findImmediateLeader(driver);
+    const driverAhead = this.findDriverAhead(driver);
 
-    if (!this.canAttemptOvertake(driver, leader)) {
+    if (!driverAhead) {
       return;
     }
 
-    // Get the minimum speed advantage needed to attempt an overtake
-    const requiredSpeedAdvantage = 1.02; // Need to be 2% faster
-    const driverIdealSpeed = this.getIdealSpeed(driver);
-    const leaderIdealSpeed = this.getIdealSpeed(leader!);
+    // Calculate gap to car ahead
+    const gap = this.calculateGapToLeader(driver, driverAhead);
 
-    if (driverIdealSpeed < leaderIdealSpeed * requiredSpeedAdvantage) {
-      return; // Not enough speed advantage
+    // Get minimum following distance using static methods
+    const aeroCharacteristics =
+      VEHICLE_AERO_CHARACTERISTICS[this.raceConfig.vehicleClass];
+    const trackDirtyAirFactor = RacingUtils.calculateTrackDirtyAirFactor(
+      this.raceConfig.track
+    );
+    const minTimeGap = RacingUtils.calculateMinTimeGap(
+      aeroCharacteristics,
+      driverAhead.racecraft.defense,
+      trackDirtyAirFactor
+    );
+    const idealSpeed = this.getIdealSpeed(driver);
+    const minDistanceGap = minTimeGap * idealSpeed;
+
+    // Check if driver is close enough to attempt overtake
+    const isCloseEnoughForOvertake = gap < minDistanceGap * 1.2; // Within 120% of minimum distance
+
+    var driverSpeed = this.getIdealSpeed(driver);
+    var speedNeeded = this.getIdealSpeed(driverAhead) * 1.01;
+    // Check speed advantage
+    const hasSpeedAdvantage = driverSpeed > speedNeeded;
+
+    if (
+      !isCloseEnoughForOvertake ||
+      !hasSpeedAdvantage ||
+      !driver.isAttemptingOvertake
+    ) {
+      return;
     }
 
-    const overtakeChance = this.calculateOvertakeChance(driver, leader!);
+    const baseOvertakeChance = RacingUtils.calculateBaseOvertakeChance(
+      driver,
+      driverAhead
+    );
+
+    // Adjust overtake chance based on how close driver is - closer increases chance
+    const closenessMultiplier = Math.min(1.5, minDistanceGap / gap);
+    const finalOvertakeChance = baseOvertakeChance * closenessMultiplier;
 
     this.addToLog(
       `[DEBUG] ${driver.driver.name} attempting to overtake ${
-        leader!.driver.name
-      } with chance ${overtakeChance.toFixed(2)}`,
+        driverAhead.driver.name
+      } with chance ${finalOvertakeChance.toFixed(
+        2
+      )} (closeness: ${closenessMultiplier.toFixed(2)})`,
       true
     );
 
-    if (this.rng.next() < overtakeChance) {
-      this.applySuccessfulOvertake(driver, leader!, currentTime);
+    if (this.rng.next() < finalOvertakeChance) {
+      this.applySuccessfulOvertake(driver, driverAhead, currentTime);
     } else {
       this.applyFailedOvertake(driver, currentTime);
     }
@@ -375,19 +472,6 @@ export class Race {
       leader !== null &&
       driver.currentLap === leader.currentLap && // Ensure they are on the same lap
       this.calculateGapToLeader(driver, leader) < 20 // Close enough to attempt overtake
-    );
-  }
-
-  /**
-   * Calculates the chance of a successful overtake based on driver skills
-   */
-  calculateOvertakeChance(driver: RaceDriver, leader: RaceDriver): number {
-    const baseOvertakeChance =
-      (driver.aggression * driver.racecraft.attack) / leader.racecraft.defense;
-
-    // Set reasonable minimum and maximum chances
-    return (
-      Math.min(Math.max(baseOvertakeChance, 0.1), 0.5) + this.overtakeBaseChance
     );
   }
 
@@ -429,7 +513,7 @@ export class Race {
     driver.overtakeCooldown = 4; // cooldown for failed overtake
   }
 
-  findImmediateLeader(driver: RaceDriver): RaceDriver | null {
+  findDriverAhead(driver: RaceDriver): RaceDriver | null {
     // Calculate total progress for current driver
     const driverProgress =
       driver.currentLap * this.trackLength + driver.trackPosition;

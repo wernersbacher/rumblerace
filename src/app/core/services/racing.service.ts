@@ -15,6 +15,7 @@ import { DriverService } from './driver.service';
 import { Race } from '../racelogic/core';
 import { CurrencyService } from './currency.service';
 import { TimerService } from './timer.service';
+import { SIMCONFIG } from '../racelogic/simulation';
 
 @Injectable({
   providedIn: 'root',
@@ -207,7 +208,7 @@ export class RaceService {
           return;
         }
 
-        this.raceState.currentTime += this.race.dt;
+        this.raceState.currentTime += SIMCONFIG.DT;
         this.race.processSimulationTick(this.raceState.currentTime);
 
         // Update race state from simulation
