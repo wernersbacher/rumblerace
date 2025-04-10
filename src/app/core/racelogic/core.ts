@@ -13,14 +13,14 @@ export class Race {
   rng: Rand;
   drivers: RaceDriver[] = [];
   numLaps: number;
-  log: string[] = [];
+  log: string[] = []; // Add at class level:
   debugMode: boolean = false;
 
   // Simulationseinstellungen:
   readonly dt: number = 0.5; // Zeitschritt (Sekunden)
   readonly trackLength: number = 3500; // Länge einer Runde in Metern
   readonly errorBaseChance: number = 0.005; // Basiswahrscheinlichkeit für einen Fehler pro Sekunde
-  readonly overtakeBaseChance: number = 0.01; // Basischance, dass ein Überholversuch initiiert wird, wenn gedrängt
+  readonly overtakeBaseChance: number = 0.003; // Basischance, dass ein Überholversuch initiiert wird, wenn gedrängt
 
   constructor(
     drivers: RaceDriver[],
@@ -184,7 +184,12 @@ export class Race {
    * @returns Abstand in Metern
    */
   calculateGapToLeader(driver: RaceDriver, leader: RaceDriver): number {
-    return leader.trackPosition - driver.trackPosition;
+    const driverProgress =
+      driver.currentLap * this.trackLength + driver.trackPosition;
+    const leaderProgress =
+      leader.currentLap * this.trackLength + leader.trackPosition;
+
+    return leaderProgress - driverProgress;
   }
 
   /**
@@ -232,107 +237,211 @@ export class Race {
   processEvents(driver: RaceDriver, currentTime: number) {
     if (driver.finished) return;
 
-    // Fehlerchance: Basischance plus ein Zuschlag je nach Aggression.
-    const errorChance = this.errorBaseChance + 0.002 * driver.aggression;
-    if (this.rng.next() < errorChance) {
-      // Fehler-/Unfall-Ereignis:
-      // Bei hoher Aggression kann es zu einem größeren Unfall kommen.
-      const accidentThreshold = 3; // ab Aggression 4 steigt Unfallrisiko
-      if (driver.aggression >= accidentThreshold && this.rng.next() < 0.15) {
-        const damage = this.getRandomInRange(1, 3);
-        driver.damage += damage;
-        this.addToLog(
-          `[${currentTime.toFixed(1)}s] ${
-            driver.driver.name
-          } hat einen schweren Fehler gemacht und Schaden +${damage.toFixed(
-            1
-          )} erlitten!`
-        );
-      } else {
-        // Kleinere Fehler: leichter Schaden
-        const damage = this.getRandomInRange(0.2, 1);
-        driver.damage += damage;
-        this.addToLog(
-          `[${currentTime.toFixed(1)}s] ${
-            driver.driver.name
-          } macht einen Fehler und verliert etwas Tempo (Schaden +${damage.toFixed(
-            1
-          )}).`
-        );
-      }
-    }
+    // Handle driver errors
+    this.processDriverError(driver, currentTime);
 
-    // Überholversuch: Wenn der Fahrer dicht am Vordermann fährt,
-    // kann er versuchen, diesen zu überholen.
-    // Ein solcher Versuch wird nur initiiert, wenn der Abstand in Metern sehr gering ist.
-    const leader = this.findImmediateLeader(driver);
-    if (
-      leader &&
-      driver.currentLap === leader.currentLap && // Ensure they are on the same lap
-      leader.trackPosition - driver.trackPosition < 20 &&
-      this.getIdealSpeed(driver) > this.getIdealSpeed(leader)
-    ) {
-      // Berechne eine Überholchance, basierend auf Aggression und Racecraft.
-      const baseOvertakeChance =
-        (driver.aggression * driver.racecraft.attack) /
-        leader.racecraft.defense;
-      // Normalisiere in einen sinnvollen Bereich:
-      const chance =
-        Math.min(Math.max(baseOvertakeChance, 0.1), 0.6) +
-        this.overtakeBaseChance;
-      this.addToLog(
-        `[DEBUG] ${driver.driver.name} attempting to overtake ${
-          leader.driver.name
-        } with chance ${chance.toFixed(2)}`,
-        true
-      );
-      if (this.rng.next() < chance) {
-        // Überholversuch erfolgreich: Tausche den Fortschritt der beiden Fahrer,
-        // sodass der Trailing den Leader überholt.
-        this.swapPositions(driver, leader);
-        this.addToLog(
-          `[${currentTime.toFixed(1)}s] ${driver.driver.name} überholt ${
-            leader.driver.name
-          }!`
-        );
+    // Handle overtaking attempts
+    this.processOvertakingAttempt(driver, currentTime);
+  }
+
+  /**
+   * Processes potential driver errors based on driver aggression and random chance
+   */
+  processDriverError(driver: RaceDriver, currentTime: number): void {
+    const errorChance = this.calculateErrorChance(driver);
+
+    if (this.rng.next() < errorChance) {
+      if (this.isMajorError(driver)) {
+        this.applyMajorError(driver, currentTime);
       } else {
-        // Scheiterter Überholversuch: kleiner Fehler, der zusätzlichen Schaden einbringt.
-        const damage = this.getRandomInRange(0, 0.5);
-        driver.damage += damage;
-        this.addToLog(
-          `[${currentTime.toFixed(1)}s] ${
-            driver.driver.name
-          } versucht zu überholen, scheitert aber und verliert Zeit (Schaden +${damage.toFixed(
-            1
-          )}).`
-        );
+        this.applyMinorError(driver, currentTime);
       }
     }
   }
 
   /**
-   * Hilfsfunktion: Findet den unmittelbar vor dem gegebenen Fahrer liegenden
-   * Fahrer (im Sinne des Fortschritts). Dazu wird nach Fahrern gesucht, die weiter
-   * als der aktuelle Fahrer sind. Liegt keiner vor, gibt es null zurück.
+   * Calculates the chance of a driver making an error based on their aggression
    */
+  calculateErrorChance(driver: RaceDriver): number {
+    return this.errorBaseChance + 0.002 * driver.aggression;
+  }
+
+  /**
+   * Determines if a driver's error is major based on aggression and random chance
+   */
+  isMajorError(driver: RaceDriver): boolean {
+    const accidentThreshold = 3;
+    return driver.aggression >= accidentThreshold && this.rng.next() < 0.15;
+  }
+
+  /**
+   * Applies a major error effect to the driver
+   */
+  applyMajorError(driver: RaceDriver, currentTime: number): void {
+    const damage = this.getRandomInRange(1, 3);
+    driver.damage += damage;
+    this.addToLog(
+      `[${currentTime.toFixed(1)}s] ${
+        driver.driver.name
+      } hat einen schweren Fehler gemacht und Schaden +${damage.toFixed(
+        1
+      )} erlitten!`
+    );
+  }
+
+  /**
+   * Applies a minor error effect to the driver
+   */
+  applyMinorError(driver: RaceDriver, currentTime: number): void {
+    const damage = this.getRandomInRange(0.2, 1);
+    driver.damage += damage;
+    this.addToLog(
+      `[${currentTime.toFixed(1)}s] ${
+        driver.driver.name
+      } macht einen Fehler und verliert etwas Tempo (Schaden +${damage.toFixed(
+        1
+      )}).`
+    );
+  }
+
+  /**
+   * Processes potential overtaking attempts based on driver position and skills
+   */
+  processOvertakingAttempt(driver: RaceDriver, currentTime: number): void {
+    // Check if driver is on cooldown from previous overtake
+    if (driver.overtakeCooldown > 0) {
+      driver.overtakeCooldown -= this.dt;
+      return;
+    }
+
+    const leader = this.findImmediateLeader(driver);
+
+    if (!this.canAttemptOvertake(driver, leader)) {
+      return;
+    }
+
+    // Get the minimum speed advantage needed to attempt an overtake
+    const requiredSpeedAdvantage = 1.02; // Need to be 2% faster
+    const driverIdealSpeed = this.getIdealSpeed(driver);
+    const leaderIdealSpeed = this.getIdealSpeed(leader!);
+
+    if (driverIdealSpeed < leaderIdealSpeed * requiredSpeedAdvantage) {
+      return; // Not enough speed advantage
+    }
+
+    const overtakeChance = this.calculateOvertakeChance(driver, leader!);
+
+    this.addToLog(
+      `[DEBUG] ${driver.driver.name} attempting to overtake ${
+        leader!.driver.name
+      } with chance ${overtakeChance.toFixed(2)}`,
+      true
+    );
+
+    if (this.rng.next() < overtakeChance) {
+      this.applySuccessfulOvertake(driver, leader!, currentTime);
+    } else {
+      this.applyFailedOvertake(driver, currentTime);
+    }
+  }
+
+  /**
+   * Determines if a driver can attempt an overtake based on race conditions
+   */
+  canAttemptOvertake(driver: RaceDriver, leader: RaceDriver | null): boolean {
+    return (
+      leader !== null &&
+      driver.currentLap === leader.currentLap && // Ensure they are on the same lap
+      this.calculateGapToLeader(driver, leader) < 20 // Close enough to attempt overtake
+    );
+  }
+
+  /**
+   * Calculates the chance of a successful overtake based on driver skills
+   */
+  calculateOvertakeChance(driver: RaceDriver, leader: RaceDriver): number {
+    const baseOvertakeChance =
+      (driver.aggression * driver.racecraft.attack) / leader.racecraft.defense;
+
+    // Set reasonable minimum and maximum chances
+    return (
+      Math.min(Math.max(baseOvertakeChance, 0.1), 0.5) + this.overtakeBaseChance
+    );
+  }
+
+  /**
+   * Applies effects of a successful overtake
+   */
+  applySuccessfulOvertake(
+    driver: RaceDriver,
+    leader: RaceDriver,
+    currentTime: number
+  ): void {
+    this.swapPositions(driver, leader);
+    this.addToLog(
+      `[${currentTime.toFixed(1)}s] ${driver.driver.name} überholt ${
+        leader.driver.name
+      }!`
+    );
+
+    // Apply overtaking cooldown to prevent immediate counter-overtaking
+    driver.overtakeCooldown = 5; // cooldown for successful overtake
+    leader.overtakeCooldown = 3; // cooldown for overtaken driver
+  }
+
+  /**
+   * Applies effects of a failed overtake attempt
+   */
+  applyFailedOvertake(driver: RaceDriver, currentTime: number): void {
+    const damage = this.getRandomInRange(0, 0.5);
+    driver.damage += damage;
+    this.addToLog(
+      `[${currentTime.toFixed(1)}s] ${
+        driver.driver.name
+      } versucht zu überholen, scheitert aber und verliert Zeit (Schaden +${damage.toFixed(
+        1
+      )}).`
+    );
+
+    // Apply shorter cooldown after failed attempt
+    driver.overtakeCooldown = 4; // cooldown for failed overtake
+  }
+
   findImmediateLeader(driver: RaceDriver): RaceDriver | null {
-    // Filtere alle Fahrer, die noch nicht fertig sind und weiter fortgeschritten sind.
+    // Calculate total progress for current driver
+    const driverProgress =
+      driver.currentLap * this.trackLength + driver.trackPosition;
+
+    // Find all drivers ahead of this one (those with greater total progress)
     const candidates = this.drivers.filter(
       (d) =>
         !d.finished &&
+        d !== driver && // Don't include the driver itself
         d.totalTime >= 0 &&
-        (d.totalTime > driver.totalTime ||
-          d.trackPosition > driver.trackPosition)
+        (d.currentLap > driver.currentLap ||
+          (d.currentLap === driver.currentLap &&
+            d.trackPosition > driver.trackPosition))
     );
+
     if (candidates.length === 0) return null;
-    // Sortiere nach (Laufender Gesamtfortschritt: (aktuelle Runde * Strecke + Position)).
+
+    // Sort by total progress to find the closest driver ahead
     candidates.sort((a, b) => {
       const progressA = a.currentLap * this.trackLength + a.trackPosition;
       const progressB = b.currentLap * this.trackLength + b.trackPosition;
-      return progressA - progressB;
+      return progressA - progressB; // ascending order
     });
-    // Der jeweils erste Kandidat ist der unmittelbar vor dem Fahrer.
-    return candidates[0];
+
+    // Return the driver immediately ahead (smallest progress greater than driver's)
+    for (const candidate of candidates) {
+      const candidateProgress =
+        candidate.currentLap * this.trackLength + candidate.trackPosition;
+      if (candidateProgress > driverProgress) {
+        return candidate;
+      }
+    }
+
+    return null;
   }
 
   /**

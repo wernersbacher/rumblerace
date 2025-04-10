@@ -20,6 +20,7 @@ export interface RaceDriver {
   trackPosition: number;
   finished: boolean;
   totalTime: number;
+  overtakeCooldown: number;
 }
 
 export interface RaceResult {

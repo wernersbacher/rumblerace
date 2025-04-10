@@ -1,46 +1,48 @@
 import { RaceDriver } from '../models/race.model';
 import { Race } from './core';
 import { DAMAGE_PENALTY } from './damage';
+
+// Helper function to create a standard driver for tests
+function createDriver(
+  id: number,
+  name: string,
+  baseLapTime: number,
+  isPlayer = false
+): RaceDriver {
+  return {
+    id,
+    driver: {
+      name,
+      xp: 0,
+      skills: {
+        linesAndApex: 0.5,
+        brakeControl: 0.4,
+        throttleControl: 0.3,
+        consistency: 0.6,
+        tireManagement: 0.2,
+        racecraft: 0.3,
+        setupUnderstanding: 0.1,
+        trackAwareness: 0.4,
+        adaptability: 0.2,
+      },
+      specificSkills: {},
+    },
+    baseLapTime,
+    damage: 0,
+    aggression: 3,
+    racecraft: { attack: 0.8, defense: 0.8 },
+    isPlayer,
+    currentLap: 1,
+    trackPosition: 0,
+    finished: false,
+    totalTime: 0,
+    overtakeCooldown: 0,
+  };
+}
+
 describe('Race', () => {
   let race: Race;
   let drivers: RaceDriver[];
-
-  // Helper function to create a standard driver for tests
-  function createDriver(
-    id: number,
-    name: string,
-    baseLapTime: number,
-    isPlayer = false
-  ): RaceDriver {
-    return {
-      id,
-      driver: {
-        name,
-        xp: 0,
-        skills: {
-          linesAndApex: 0.5,
-          brakeControl: 0.4,
-          throttleControl: 0.3,
-          consistency: 0.6,
-          tireManagement: 0.2,
-          racecraft: 0.3,
-          setupUnderstanding: 0.1,
-          trackAwareness: 0.4,
-          adaptability: 0.2,
-        },
-        specificSkills: {},
-      },
-      baseLapTime,
-      damage: 0,
-      aggression: 3,
-      racecraft: { attack: 0.8, defense: 0.8 },
-      isPlayer,
-      currentLap: 1,
-      trackPosition: 0,
-      finished: false,
-      totalTime: 0,
-    };
-  }
 
   beforeEach(() => {
     drivers = [
@@ -199,6 +201,40 @@ describe('Race', () => {
       expect(leader).toBe(driver2); // Driver2 is immediately ahead of Driver1
     });
 
+    it('should always find a driver ahead, not behind', () => {
+      // Setup drivers with different positions
+      const driver1 = createDriver(1, 'Driver 1', 60);
+      const driver2 = createDriver(2, 'Driver 2', 62);
+      const driver3 = createDriver(3, 'Driver 3', 65);
+
+      driver1.trackPosition = 100;
+      driver1.currentLap = 1;
+
+      driver2.trackPosition = 200;
+      driver2.currentLap = 1;
+
+      driver3.trackPosition = 50; // Lower position but...
+      driver3.currentLap = 2; // Higher lap
+
+      race.drivers = [driver1, driver2, driver3];
+
+      // Check if immediate leader of driver1 is driver2
+      const leader1 = race.findImmediateLeader(driver1);
+      expect(leader1).toBe(driver2);
+
+      // Check if leader of driver2 is driver3 (because driver3 is on a higher lap)
+      const leader2 = race.findImmediateLeader(driver2);
+      expect(leader2).toBe(driver3);
+
+      // Check gap calculations are positive
+      expect(
+        race.calculateGapToLeader(driver1, leader1!)
+      ).toBeGreaterThanOrEqual(0);
+      expect(
+        race.calculateGapToLeader(driver2, leader2!)
+      ).toBeGreaterThanOrEqual(0);
+    });
+
     it('should return null when no leader exists', () => {
       const driver = drivers[0];
       driver.trackPosition = 500; // Ahead of everyone
@@ -243,5 +279,122 @@ describe('Race', () => {
 
       expect(race.processSimulationTick).toHaveBeenCalledTimes(3);
     });
+  });
+});
+
+describe('Overtaking mechanics', () => {
+  let race: Race;
+  let driver1: RaceDriver;
+  let driver2: RaceDriver;
+
+  beforeEach(() => {
+    // Setup two drivers with different characteristics
+    driver1 = createDriver(1, 'Aggressive Driver', 60);
+    driver1.aggression = 4;
+    driver1.racecraft = { attack: 0.9, defense: 0.6 };
+
+    driver2 = createDriver(2, 'Defensive Driver', 60.5); // Slightly slower
+    driver2.aggression = 2;
+    driver2.racecraft = { attack: 0.6, defense: 0.9 };
+
+    // Setup race with these drivers
+    race = new Race([driver1, driver2], 3, 'test-seed-123');
+
+    // Position them close to each other
+    driver1.trackPosition = 100;
+    driver2.trackPosition = 115;
+  });
+
+  it('should not attempt overtake when too far apart', () => {
+    // Position drivers far apart
+    driver1.trackPosition = 50;
+    driver2.trackPosition = 200;
+
+    spyOn(race as any, 'calculateOvertakeChance');
+    spyOn(race as any, 'applySuccessfulOvertake');
+
+    (race as any).processOvertakingAttempt(driver1, 10);
+
+    expect((race as any).calculateOvertakeChance).not.toHaveBeenCalled();
+    expect((race as any).applySuccessfulOvertake).not.toHaveBeenCalled();
+  });
+
+  it('should respect overtaking cooldown period', () => {
+    // Set a cooldown for driver1
+    driver1.overtakeCooldown = 5;
+
+    spyOn(race, 'canAttemptOvertake');
+
+    (race as any).processOvertakingAttempt(driver1, 10);
+
+    // Should not even check if overtake is possible due to cooldown
+    expect((race as any).canAttemptOvertake).not.toHaveBeenCalled();
+
+    // Verify cooldown was reduced
+    expect(driver1.overtakeCooldown).toBe(5 - race.dt);
+  });
+
+  it('should require sufficient speed advantage to attempt overtake', () => {
+    spyOn(race, 'getIdealSpeed').and.returnValues(
+      58, // driver1 speed - not fast enough
+      60 // driver2 speed
+    );
+
+    spyOn(race as any, 'calculateOvertakeChance');
+
+    (race as any).processOvertakingAttempt(driver1, 10);
+
+    // Should not calculate chance with insufficient speed advantage
+    expect((race as any).calculateOvertakeChance).not.toHaveBeenCalled();
+  });
+
+  it('should apply cooldown to both drivers after successful overtake', () => {
+    // Setup to ensure overtake will succeed
+    spyOn(race, 'getIdealSpeed').and.returnValues(65, 60); // Faster than needed
+    spyOn(race, 'calculateOvertakeChance').and.returnValue(1.0); // 100% chance
+
+    (race as any).processOvertakingAttempt(driver1, 10);
+
+    // Verify cooldowns were set
+    expect(driver1.overtakeCooldown).toBe(5);
+    expect(driver2.overtakeCooldown).toBe(3);
+  });
+
+  it('should result in realistic overtake success rates', () => {
+    // Run multiple simulations and count successful overtakes
+    const attempts = 100;
+    let successful = 0;
+
+    // Mock speed advantage
+    spyOn(race, 'getIdealSpeed').and.returnValues(
+      ...Array(attempts * 2)
+        .fill(0)
+        .map(
+          (_, i) => (i % 2 === 0 ? 70 : 60) // Alternate between 62 and 60
+        )
+    );
+
+    spyOn(race, 'applyFailedOvertake');
+    spyOn(race, 'applySuccessfulOvertake').and.callFake(() => {
+      successful++; // Increment counter when successful
+    });
+
+    for (let i = 0; i < attempts; i++) {
+      // Reset position each time
+      driver1.trackPosition = 100;
+      driver2.trackPosition = 115;
+
+      // Clear any cooldowns
+      driver1.overtakeCooldown = 0;
+      driver2.overtakeCooldown = 0;
+
+      // Call the method with the spies already in place
+      (race as any).processOvertakingAttempt(driver1, 10);
+    }
+
+    // With aggressive vs defensive driver and 3.3% speed advantage,
+    // we expect about 30-50% success rate
+    expect(successful).toBeGreaterThan(30);
+    expect(successful).toBeLessThan(70);
   });
 });

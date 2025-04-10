@@ -102,6 +102,7 @@ export class RaceService {
       trackPosition: 0,
       finished: false,
       totalTime: 0,
+      overtakeCooldown: 0,
     });
 
     // Add AI drivers
@@ -126,6 +127,7 @@ export class RaceService {
         trackPosition: 0,
         finished: false,
         totalTime: 0,
+        overtakeCooldown: 0,
       });
     });
 
