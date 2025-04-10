@@ -1,5 +1,5 @@
 import Rand from 'rand-seed';
-import { RaceDriver } from '../models/race.model';
+import { RaceConfig, RaceDriver } from '../models/race.model';
 import { DAMAGE_PENALTY } from './damage';
 
 /**
@@ -13,26 +13,26 @@ export class Race {
   rng: Rand;
   drivers: RaceDriver[] = [];
   numLaps: number;
+  trackLength: number;
   log: string[] = []; // Add at class level:
   debugMode: boolean = false;
 
   // Simulationseinstellungen:
   readonly dt: number = 0.5; // Zeitschritt (Sekunden)
-  readonly trackLength: number = 3500; // Länge einer Runde in Metern
   readonly errorBaseChance: number = 0.005; // Basiswahrscheinlichkeit für einen Fehler pro Sekunde
   readonly overtakeBaseChance: number = 0.003; // Basischance, dass ein Überholversuch initiiert wird, wenn gedrängt
 
   constructor(
     drivers: RaceDriver[],
-    numLaps: number,
-    seed: string | undefined,
+    config: RaceConfig,
     debugMode: boolean = false
   ) {
     this.debugMode = debugMode;
-    this.rng = new Rand(seed);
+    this.rng = new Rand(config.seed);
     // Fahrer werden in Startreihenfolge im Array geliefert.
     this.drivers = drivers;
-    this.numLaps = numLaps;
+    this.trackLength = config.track.lengthMeters;
+    this.numLaps = config.numLaps;
     // Initialisiere die Simulationstate der Fahrer:
     this.drivers.forEach((driver) => {
       driver.currentLap = 1;
@@ -90,6 +90,14 @@ export class Race {
    * @param simulationTime Die aktuelle Simulationszeit
    */
   processSimulationTick(simulationTime: number): void {
+    this.addToLog(' ');
+
+    this.drivers.sort((a, b) => {
+      const progressA = a.currentLap * this.trackLength + a.trackPosition;
+      const progressB = b.currentLap * this.trackLength + b.trackPosition;
+      return progressB - progressA; // Descending order (leader first)
+    });
+
     // First collect all position updates without applying them
     const positionUpdates = this.drivers.map((driver) => {
       if (driver.finished) return null;
@@ -131,13 +139,6 @@ export class Race {
     this.logLiveGaps(simulationTime);
   }
 
-  /**
-   * Berechnet die tatsächliche Geschwindigkeit eines Fahrers unter Berücksichtigung des Leaders
-   * @param driver Der Fahrer
-   * @param idealSpeed Die ideale Geschwindigkeit des Fahrers
-   * @param leader Der führende Fahrer (oder null)
-   * @returns Die tatsächliche Geschwindigkeit
-   */
   calculateActualSpeed(
     driver: RaceDriver,
     idealSpeed: number,
@@ -158,18 +159,28 @@ export class Race {
       }
 
       this.addToLog(
-        `[DEBUG] ${driver.driver.name} speed: ${actualSpeed.toFixed(
-          2
-        )} m/s (${idealSpeed.toFixed(2)} m/s id), gap to leader: ${gap.toFixed(
-          2
-        )} m`,
+        `[DEBUG] ${driver.driver.name} - Pos: L${
+          driver.currentLap
+        }@${driver.trackPosition.toFixed(1)}m - ` +
+          `Speed: ${actualSpeed.toFixed(2)} m/s (${idealSpeed.toFixed(
+            2
+          )} m/s ideal) - ` +
+          `Gap to ${leader.driver.name}: ${gap.toFixed(2)}m - ` +
+          `Damage: ${driver.damage.toFixed(1)} - ` +
+          `Time: ${driver.totalTime.toFixed(1)}s`,
         true
       );
     } else {
       this.addToLog(
-        `[DEBUG] ${driver.driver.name} speed: ${actualSpeed.toFixed(
-          2
-        )} m/s (${idealSpeed.toFixed(2)} m/s id), (leader)`,
+        `[DEBUG] ${driver.driver.name} - Pos: L${
+          driver.currentLap
+        }@${driver.trackPosition.toFixed(1)}m - ` +
+          `Speed: ${actualSpeed.toFixed(2)} m/s (${idealSpeed.toFixed(
+            2
+          )} m/s ideal) - ` +
+          `LEADER - ` +
+          `Damage: ${driver.damage.toFixed(1)} - ` +
+          `Time: ${driver.totalTime.toFixed(1)}s`,
         true
       );
     }
@@ -207,16 +218,27 @@ export class Race {
     // Time adjustment = fraction of the time step that was used to reach the finish line
     const timeAdjustment = actualSpeed > 0 ? overrunDistance / actualSpeed : 0;
 
+    if (driver.currentLap > 1) {
+      const lapCompleteTime = driver.totalTime - timeAdjustment;
+      driver.lastLapTime = lapCompleteTime;
+    }
+
     // Adjust total time to represent the exact finish time
     driver.totalTime -= timeAdjustment;
 
     driver.currentLap++;
     // Überschüssige Strecke zum Übertrag in die nächste Runde:
     driver.trackPosition = overrunDistance;
+
+    // Update log with lap time information
+    const lapTimeInfo = driver.lastLapTime
+      ? ` (Rundenzeit: ${driver.lastLapTime.toFixed(3)}s)`
+      : '';
+
     this.addToLog(
       `${driver.driver.name} beendete Runde ${
         driver.currentLap - 1
-      } (Gesamtzeit: ${driver.totalTime.toFixed(3)}s)`
+      } (Gesamtzeit: ${driver.totalTime.toFixed(3)}s)${lapTimeInfo}`
     );
 
     // Prüfe, ob das Rennen vorbei ist
@@ -475,23 +497,34 @@ export class Race {
       return progressB - progressA; // absteigende Reihenfolge (Führer zuerst)
     });
 
+    // Update time deltas for each driver to show in race UI
+    sortedDrivers.forEach((driver, i) => {
+      if (i === 0) {
+        // Leader has no time delta
+        driver.timeDeltaToAhead = 0;
+      } else {
+        const ahead = sortedDrivers[i - 1];
+        const meterGap =
+          ahead.currentLap * this.trackLength +
+          ahead.trackPosition -
+          (driver.currentLap * this.trackLength + driver.trackPosition);
+
+        // Calculate time gap to driver ahead
+        const driverSpeed = this.getIdealSpeed(driver);
+        const timeGap = driverSpeed > 0 ? meterGap / driverSpeed : 0;
+
+        // Store time delta for UI display
+        driver.timeDeltaToAhead = timeGap;
+      }
+    });
+
     let gapLog = `[${currentTime.toFixed(1)}s] Live-Abstände: `;
     gapLog += sortedDrivers
       .map((driver, i) => {
         if (i === 0) return `${driver.driver.name} (Leading)`;
-        // Berechne den Abstand zwischen dem Fahrer und seinem Vordermann in Metern:
-        const leader = sortedDrivers[i - 1];
-        const meterGap =
-          leader.currentLap * this.trackLength +
-          leader.trackPosition -
-          (driver.currentLap * this.trackLength + driver.trackPosition);
-
-        // Berechne die Zeit, die der Fahrer bei seiner idealen Geschwindigkeit braucht,
-        // um diesen Abstand aufzuholen
-        const driverSpeed = this.getIdealSpeed(driver);
-        const timeGap = driverSpeed > 0 ? meterGap / driverSpeed : 0;
-
-        return `${driver.driver.name}: ${timeGap.toFixed(1)}s`;
+        // Use the correctly stored timeDeltaToAhead
+        const timeGap = driver.timeDeltaToAhead ?? 0;
+        return `${driver.driver.name}: +${timeGap.toFixed(1)}s`;
       })
       .join(' | ');
     this.addToLog(gapLog);

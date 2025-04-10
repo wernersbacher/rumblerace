@@ -123,6 +123,7 @@ import { Subscription } from 'rxjs';
                 <th>Driver</th>
                 <th>Lap</th>
                 <th>Last Lap</th>
+                <th>Gap</th>
                 <th>Damage</th>
               </tr>
             </ng-template>
@@ -134,6 +135,11 @@ import { Subscription } from 'rxjs';
                 <td>
                   {{
                     driver.lastLapTime ? formatTime(driver.lastLapTime) : '-'
+                  }}
+                </td>
+                <td>
+                  {{
+                    i === 0 ? '-' : '+' + formatTime(driver.timeDeltaToAhead)
                   }}
                 </td>
                 <td>

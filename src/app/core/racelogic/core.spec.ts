@@ -1,4 +1,6 @@
-import { RaceDriver } from '../models/race.model';
+import { BEGINNER_TRACKS } from '../data/tracks.data';
+import { RaceConfig, RaceDriver } from '../models/race.model';
+import { VehicleClass } from '../models/vehicle.model';
 import { Race } from './core';
 import { DAMAGE_PENALTY } from './damage';
 
@@ -40,6 +42,14 @@ function createDriver(
   };
 }
 
+const raceConfig = {
+  track: BEGINNER_TRACKS[0], // Use the first track for testing
+  vehicleClass: VehicleClass.GT3,
+  numLaps: 3,
+  opponents: 1,
+  seed: 'test-seed-123',
+};
+
 describe('Race', () => {
   let race: Race;
   let drivers: RaceDriver[];
@@ -51,7 +61,7 @@ describe('Race', () => {
     ];
 
     // Create a Race with a fixed seed for predictable tests
-    race = new Race(drivers, 3, 'test-seed-123');
+    race = new Race(drivers, raceConfig);
   });
 
   describe('getEffectiveLapTime', () => {
@@ -298,7 +308,7 @@ describe('Overtaking mechanics', () => {
     driver2.racecraft = { attack: 0.6, defense: 0.9 };
 
     // Setup race with these drivers
-    race = new Race([driver1, driver2], 3, 'test-seed-123');
+    race = new Race([driver1, driver2], raceConfig);
 
     // Position them close to each other
     driver1.trackPosition = 100;

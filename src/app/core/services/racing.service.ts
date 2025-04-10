@@ -61,7 +61,7 @@ export class RaceService {
     this.aiDrivers = this.generateAIDrivers(config);
 
     const raceDrivers = this.createRaceDrivers(config);
-    this.race = new Race(raceDrivers, config.numLaps, config.seed);
+    this.race = new Race(raceDrivers, config, true);
 
     this.raceState = {
       isActive: true,
